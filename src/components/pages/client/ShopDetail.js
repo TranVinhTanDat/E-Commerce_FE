@@ -4,6 +4,8 @@ import axios from 'axios';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import moment from 'moment';
+import API_BASE_URL from '../../../utils/config';
+
 
 function ShopDetail() {
     const { productId } = useParams();
@@ -17,7 +19,7 @@ function ShopDetail() {
         const token = localStorage.getItem('token');
         const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
 
-        axios.get(`http://localhost:8080/products/${productId}`, { headers })
+        axios.get(`${API_BASE_URL}/products/${productId}`, { headers })
             .then(response => {
                 setProduct(response.data);
             })
@@ -31,7 +33,7 @@ function ShopDetail() {
     const fetchComments = (token) => {
         const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
 
-        axios.get(`http://localhost:8080/comments/product/${productId}`, { headers })
+        axios.get(`${API_BASE_URL}/comments/product/${productId}`, { headers })
             .then(response => {
                 setComments(response.data);
             })
@@ -47,7 +49,7 @@ function ShopDetail() {
             return;
         }
 
-        axios.post('http://localhost:8080/cart/add', {
+        axios.post(`${API_BASE_URL}/cart/add`, {
             productId: product.id,
             quantity: quantity
         }, {
@@ -73,7 +75,7 @@ function ShopDetail() {
             return;
         }
 
-        axios.post('http://localhost:8080/comments/add', {
+        axios.post(`${API_BASE_URL}/comments/add`, {
             productId: product.id,
             commentText: commentText,
             rating: rating
@@ -87,8 +89,8 @@ function ShopDetail() {
             fetchComments(token); // Refresh comments after adding
         })
         .catch(error => {
-            console.error('There was an error adding the comment!', error);
-            toast.error('Error adding comment.');
+            console.error('Please purchase product to review!!', error);
+            toast.error('Please purchase product to review!');
         });
     };
 
@@ -152,29 +154,30 @@ function ShopDetail() {
                                     </button>
                                 </div>
                                 <div className="col-lg-12">
-                                    <nav>
-                                        <div className="nav nav-tabs mb-3">
-                                            <button className="nav-link active border-white border-bottom-0" type="button" role="tab"
-                                                id="nav-about-tab" data-bs-toggle="tab" data-bs-target="#nav-about"
-                                                aria-controls="nav-about" aria-selected="true">Description</button>
-                                            <button className="nav-link border-white border-bottom-0" type="button" role="tab"
-                                                id="nav-mission-tab" data-bs-toggle="tab" data-bs-target="#nav-mission"
-                                                aria-controls="nav-mission" aria-selected="false">Reviews</button>
-                                        </div>
-                                    </nav>
+                                <nav>
+                                    <div className="nav nav-tabs mb-3 justify-content-center" role="tablist">
+                                        <button className="nav-link active border-white border-bottom-0" type="button" role="tab"
+                                            id="nav-about-tab" data-bs-toggle="tab" data-bs-target="#nav-about"
+                                            aria-controls="nav-about" aria-selected="true">Description</button>
+                                        <button className="nav-link border-white border-bottom-0" type="button" role="tab"
+                                            id="nav-mission-tab" data-bs-toggle="tab" data-bs-target="#nav-mission"
+                                            aria-controls="nav-mission" aria-selected="false">Reviews</button>
+                                    </div>
+                                </nav>
+
                                     <div className="tab-content mb-5">
                                         <div className="tab-pane active" id="nav-about" role="tabpanel" aria-labelledby="nav-about-tab">
                                             <p className="text-start" style={{color:'black', marginLeft:'19px'}}>{product.description}</p>
                                         </div>
                                         <div className="tab-pane" id="nav-mission" role="tabpanel" aria-labelledby="nav-mission-tab">
                                             {comments.map(comment => (
-                                                <div className="d-flex mt-4" key={comment.id}>
-                                                    <img src="https://upload.wikimedia.org/wikipedia/commons/9/99/Sample_User_Icon.png" className="img-fluid rounded-circle p-3" style={{ width: '100px', height: '100px' }} alt="" />
-                                                    <div className="ms-3">
+                                                <div className="d-flex mt-4 align-items-start" key={comment.id}>
+                                                    <img src={comment.user.avatar || "https://upload.wikimedia.org/wikipedia/commons/9/99/Sample_User_Icon.png"} className="img-fluid rounded-circle p-3" style={{ width: '100px', height: '100px' }} alt={comment.user.username} />
+                                                    <div className="ms-3 flex-grow-1">
                                                         <p className="mb-2 text-start" style={{ fontSize: '14px', color:'black' }}>{moment(comment.createdAt).format('MMMM DD, YYYY')}</p>
-                                                        <div className="d-flex justify-content-between">
+                                                        <div className="d-flex justify-content-between align-items-center mb-3">
                                                             <h5 className="text-start">{comment.user.username}</h5>
-                                                            <div className="d-flex mb-3">
+                                                            <div className="d-flex">
                                                                 {[...Array(comment.rating)].map((_, i) => (
                                                                     <i className="fa fa-star text-secondary" key={i}></i>
                                                                 ))}
@@ -244,10 +247,6 @@ function ShopDetail() {
                         <div className="col-lg-4 col-xl-3">
                             <div className="row g-4 fruite">
                                 <div className="col-lg-12">
-                                    <div className="input-group w-100 mx-auto d-flex mb-4">
-                                        <input type="search" className="form-control p-3 text-start" placeholder="keywords" aria-describedby="search-icon-1" />
-                                        <span id="search-icon-1" className="input-group-text p-3"><i className="fa fa-search"></i></span>
-                                    </div>
                                     <div className="mb-4 text-start">
                                         <h4>Categories</h4>
                                         <ul className="list-unstyled fruite-categorie">

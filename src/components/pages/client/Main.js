@@ -3,6 +3,8 @@ import axios from 'axios';
 import { Link } from 'react-router-dom';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import API_BASE_URL from '../../../utils/config';
+ // Giả định rằng bạn đã định nghĩa API_BASE_URL trong file config.js
 
 export default function Main() {
     const [products, setProducts] = useState([]);
@@ -11,7 +13,7 @@ export default function Main() {
     const [showAllProducts, setShowAllProducts] = useState(false);
 
     useEffect(() => {
-        axios.get('http://localhost:8080/products')
+        axios.get(`${API_BASE_URL}/products`)
             .then(response => {
                 setProducts(response.data);
             })
@@ -19,7 +21,7 @@ export default function Main() {
                 console.error("There was an error fetching the products!", error);
             });
 
-        axios.get('http://localhost:8080/categories')
+        axios.get(`${API_BASE_URL}/categories`)
             .then(response => {
                 setCategories(response.data);
             })
@@ -35,7 +37,7 @@ export default function Main() {
             return;
         }
 
-        axios.post('http://localhost:8080/cart/add', {
+        axios.post(`${API_BASE_URL}/cart/add`, {
             productId: productId,
             quantity: 1
         }, {
@@ -55,6 +57,7 @@ export default function Main() {
         : products.filter(product => product.category.name === activeCategory);
 
     const productsToShow = showAllProducts ? filteredProducts : filteredProducts.slice(0, 8);
+
 
     return (
         <>

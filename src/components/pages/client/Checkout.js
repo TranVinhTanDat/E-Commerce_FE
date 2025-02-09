@@ -1,141 +1,146 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import API_BASE_URL from '../../../utils/config';
 
 function Checkout() {
     const [address, setAddress] = useState({
-        id: '',
         addressLine1: '',
         addressLine2: '',
         city: '',
         state: '',
         postalCode: '',
         country: '',
-        phone: ''
+        phone: '',
+        email: ''  // Thêm trường email vào state
     });
-
+    
     const [cartItems, setCartItems] = useState([]);
     const [quantities, setQuantities] = useState({});
     const [subtotal, setSubtotal] = useState(0);
-    const [shipping] = useState(3.00); // Fixed shipping value
+    const shipping = 3.00; 
     const [total, setTotal] = useState(0);
     const [paymentMethod, setPaymentMethod] = useState('');
     const navigate = useNavigate();
 
     useEffect(() => {
         const token = localStorage.getItem('token');
+        if (!token) return;
 
-        // Fetch Address
-        axios.get('http://localhost:8080/addresses/view', {
-            headers: { 'Authorization': `Bearer ${token}` }
-        })
-        .then(response => {
-            if (response.data.length > 0) {
-                setAddress(response.data[0]);
+        const fetchData = async () => {
+            try {
+                const [addressRes, cartRes] = await Promise.all([
+                    axios.get(`${API_BASE_URL}/addresses/view`, {
+                        headers: { Authorization: `Bearer ${token}` }
+                    }),
+                    axios.get(`${API_BASE_URL}/cart/view`, {
+                        headers: { Authorization: `Bearer ${token}` }
+                    })
+                ]);
+
+                if (addressRes.data.length > 0) setAddress(addressRes.data[0]);
+
+                const cartData = cartRes.data;
+                setCartItems(cartData);
+
+                let initialSubtotal = 0;
+                const initialQuantities = cartData.reduce((acc, item) => {
+                    acc[item.id] = item.quantity;
+                    initialSubtotal += item.product.price * item.quantity;
+                    return acc;
+                }, {});
+
+                setQuantities(initialQuantities);
+                setSubtotal(initialSubtotal);
+                setTotal(initialSubtotal + shipping);
+            } catch (error) {
+                console.error('Error fetching data:', error);
             }
-        })
-        .catch(error => {
-            console.error('Error fetching address:', error);
-        });
+        };
 
-        // Fetch Cart Items
-        axios.get('http://localhost:8080/cart/view', {
-            headers: { 'Authorization': `Bearer ${token}` }
-        })
-        .then(response => {
-            setCartItems(response.data);
-            const initialQuantities = {};
-            let initialSubtotal = 0;
-            response.data.forEach(item => {
-                initialQuantities[item.id] = item.quantity;
-                initialSubtotal += item.product.price * item.quantity;
-            });
-            setQuantities(initialQuantities);
-            setSubtotal(initialSubtotal);
-            setTotal(initialSubtotal + shipping);
-        })
-        .catch(error => {
-            console.error('Error fetching cart items:', error);
-        });
-    }, [shipping]);
+        fetchData();
+    }, []);
 
     const handleChange = (e) => {
-        setAddress({
-            ...address,
-            [e.target.name]: e.target.value
-        });
+        setAddress((prev) => ({ ...prev, [e.target.name]: e.target.value }));
     };
+    
 
     const handlePaymentMethodChange = (e) => {
         setPaymentMethod(e.target.value);
     };
 
-    const handlePlaceOrder = () => {
+    const handlePlaceOrder = async () => {
+
+        if (!address.addressLine1 || !address.city || !address.state || !address.postalCode || !address.country || !address.phone || !address.email) {
+            alert('Please fill in all required fields before proceeding with the checkout.');
+            return;
+        }
         const token = localStorage.getItem('token');
+    
         if (!paymentMethod) {
             alert('Please select a payment method');
             return;
         }
     
-        const clearCart = () => {
-            axios.delete('http://localhost:8080/cart/clear', {
+        try {
+            // Gửi yêu cầu tạo đơn hàng
+            const orderResponse = await axios.post(`${API_BASE_URL}/orders/place`, {}, {
                 headers: { 'Authorization': `Bearer ${token}` }
-            })
-            .then(() => {
-                window.location.href = '/';
-            })
-            .catch(error => {
-                console.error('Error clearing cart:', error);
             });
-        };
     
-        if (paymentMethod === 'bank') {
-            axios.post('http://localhost:8080/orders/place-temporary', { paymentMethod: 'bank' }, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            })
-            .then(response => {
-                navigate(`/qrbank?orderId=${response.data.id}`);
-            })
-            .catch(error => {
-                console.error('Error placing temporary order:', error);
-            });
-        } else if (paymentMethod === 'momo') {
-            axios.post('http://localhost:8080/orders/place-temporary', { paymentMethod: 'momo' }, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            })
-            .then(response => {
-                navigate(`/qrmomo?orderId=${response.data.id}`);
-            })
-            .catch(error => {
-                console.error('Error placing temporary order:', error);
-            });
-        } else if (paymentMethod === 'cod') {
-            axios.post('http://localhost:8080/orders/place-temporary', { paymentMethod: 'cod' }, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            })
-            .then(response => {
-                const orderId = response.data.id;
-                axios.post('http://localhost:8080/payments/process', {
+            const orderId = orderResponse.data.id;
+    
+            if (paymentMethod === 'momo') {
+                // Nếu là MoMo, gửi yêu cầu thanh toán và lấy URL
+                const paymentResponse = await axios.post(`${API_BASE_URL}/payments/process`, {
                     orderId: orderId,
-                    paymentMethod: 'cod'
+                    amount: orderResponse.data.total // Đảm bảo gửi đúng amount
                 }, {
                     headers: { 'Authorization': `Bearer ${token}` }
-                })
-                .then(() => {
-                    alert('Order Placed');
-                    clearCart();
-                })
-                .catch(error => {
-                    console.error('Error processing payment:', error);
                 });
-            })
-            .catch(error => {
-                console.error('Error placing temporary order:', error);
-            });
-        } else {
-            alert('Please select a valid payment method!');
+    
+                // Kiểm tra xem paymentResponse.data có phải là một đối tượng không và có thuộc tính payUrl
+                if (paymentResponse.data && typeof paymentResponse.data === 'object' && paymentResponse.data.payUrl) {
+                    // Nếu có payUrl, điều hướng đến trang thanh toán
+                    window.location.href = paymentResponse.data.payUrl;
+                } else {
+                    console.error('Invalid payment URL received');
+                    alert('Error processing payment. Please try again.');
+                }
+            } else if (paymentMethod === 'cod') {
+                alert('Order placed successfully!');
+                navigate('/ThankYou');
+            } else {
+                alert('Please select a valid payment method!');
+            }
+        } catch (error) {
+            console.error('Error placing order:', error.response?.data || error.message);
+            alert('Failed to place order. Please try again.');
         }
     };
+
+    const handleSave = async () => {
+        if (!address.addressLine1 || !address.city || !address.state || !address.postalCode || !address.country || !address.phone || !address.email) {
+            alert('Please fill in all required fields.');
+            return;
+        }
+    
+        const token = localStorage.getItem('token');
+        
+        try {
+            // Gửi yêu cầu tạo địa chỉ mới
+            await axios.post(`${API_BASE_URL}/addresses/create`, address, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            alert('Address saved successfully!');
+        } catch (error) {
+            console.error('Error saving address:', error);
+        }
+    };
+    
+    
+    
     
 
     return (
@@ -194,12 +199,18 @@ function Checkout() {
                                 </div>
                                 <div className="form-item">
                                     <label className="form-label my-3">Mobile<sup>*</sup></label>
-                                    <input type="tel" className="form-control" name='Phone' value={address.phone} onChange={handleChange} />
+                                    <input type="tel" className="form-control" name="phone" value={address.phone} onChange={handleChange} />
                                 </div>
-                                <div className="form-item">
+
+                                                                <div className="form-item">
                                     <label className="form-label my-3">Email Address<sup>*</sup></label>
-                                    <input type="email" className="form-control" />
+                                    <input type="email" className="form-control" name="email" value={address.email} onChange={handleChange} />
                                 </div>
+
+                                <div className="row g-4 text-center align-items-center justify-content-center pt-4">
+                                    <button type="button" className="btn btn-secondary py-3 px-4 text-uppercase w-100 text-primary" onClick={handleSave}>Save</button>
+                                </div>
+
                             </div>
                             <div className="col-md-12 col-lg-6 col-xl-5">
                                 <div className="table-responsive">
@@ -241,7 +252,7 @@ function Checkout() {
                                                     </div>
                                                 </td>
                                             </tr>
-                                            <tr>
+                                            {/* <tr>
                                                 <th scope="row">
                                                 </th>
                                                 <td className="py-5">
@@ -261,7 +272,7 @@ function Checkout() {
                                                         <label className="form-check-label" htmlFor="Shipping-3">Local Pickup: $8.00</label>
                                                     </div>
                                                 </td>
-                                            </tr>
+                                            </tr> */}
                                             <tr>
                                                 <th scope="row">
                                                 </th>
@@ -279,15 +290,7 @@ function Checkout() {
                                         </tbody>
                                     </table>
                                 </div>
-                                <div className="row g-4 text-center align-items-center justify-content-center border-bottom py-3">
-                                    <div className="col-12">
-                                        <div className="form-check text-start my-3">
-                                            <input type="radio" className="form-check-input bg-primary border-0" id="PaymentMethod-1" name="PaymentMethod" value="bank" onChange={handlePaymentMethodChange} />
-                                            <label className="form-check-label" htmlFor="PaymentMethod-1">Direct Bank Transfer</label>
-                                        </div>
-                                        <p className="text-start text-dark">Make your payment directly into our bank account. Please use your Order ID as the payment reference. Your order will not be shipped until the funds have cleared in our account.</p>
-                                    </div>
-                                </div>
+              
                                 <div className="row g-4 text-center align-items-center justify-content-center border-bottom py-3">
                                     <div className="col-12">
                                         <div className="form-check text-start my-3">

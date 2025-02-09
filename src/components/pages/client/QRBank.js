@@ -1,18 +1,18 @@
-import React, { useEffect, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import React, { useState } from 'react';
 import axios from 'axios';
+import API_BASE_URL from '../../../utils/config';
 
-function QrMomo() {
-    const location = useLocation();
-    const [isVerified, setIsVerified] = useState(false);
+
+function QrBank() {
     const [buttonText, setButtonText] = useState('Đã chuyển');
-    const navigate = useNavigate();
+    const [errorMessage, setErrorMessage] = useState('');
 
     const handlePaymentSent = () => {
         const token = localStorage.getItem('token');
         setButtonText('Processing...');
+        setErrorMessage('');
 
-        axios.get('http://localhost:8080/cart/view', {
+        axios.get(`${API_BASE_URL}/cart/view`, {
             headers: { 'Authorization': `Bearer ${token}` }
         })
         .then(response => {
@@ -23,23 +23,23 @@ function QrMomo() {
                 return;
             }
 
-            axios.post('http://localhost:8080/orders/place-temporary', {}, {
+            axios.post(`${API_BASE_URL}/orders/place-temporary`, {}, {
                 headers: { 'Authorization': `Bearer ${token}` }
             })
             .then(response => {
                 const orderId = response.data.id;
-                axios.post('http://localhost:8080/payments/process', {
+                axios.post(`${API_BASE_URL}/payments/process`, {
                     orderId: orderId,
-                    paymentMethod: 'momo'
+                    paymentMethod: 'bank'
                 }, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 })
                 .then(() => {
-                    axios.delete('http://localhost:8080/cart/clear', {
+                    axios.delete(`${API_BASE_URL}/cart/clear`, {
                         headers: { 'Authorization': `Bearer ${token}` }
                     }).then(() => {
                         setButtonText('Order Placed');
-                        window.location.href = '/';
+                        window.location.href = '/ThankYou';
                     }).catch(error => {
                         console.error('Error clearing cart:', error);
                         setButtonText('Failed. Try Again');
@@ -53,6 +53,9 @@ function QrMomo() {
             .catch(error => {
                 console.error('Error placing order:', error);
                 setButtonText('Failed. Try Again');
+                if (error.response && error.response.data) {
+                    setErrorMessage(error.response.data);
+                }
             });
         })
         .catch(error => {
@@ -60,19 +63,19 @@ function QrMomo() {
             setButtonText('Failed. Try Again');
         });
     };
-
+    
     return (
         <div className="qr-container">
-            <h1>Scan QR Code to Pay with MoMo</h1>
-            <img src="img/QRMomo.jpg" alt="MoMo QR Code" className="qr-code" />
+            <h1>Scan QR Code to Pay with Bank Transfer</h1>
+            <img src="img/QRScb.jpg" alt="Bank QR Code" className="qr-code" style={{width:'300px', height:'300px'}} />
             <button onClick={handlePaymentSent}>{buttonText}</button>
-            {isVerified && (
-                <div>
-                    <p>Payment Verified! Order is now Pending.</p>
+            {errorMessage && (
+                <div className="error-message">
+                    <p>{errorMessage}</p>
                 </div>
             )}
         </div>
     );
 }
 
-export default QrMomo;
+export default QrBank;

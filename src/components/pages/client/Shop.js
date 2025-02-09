@@ -3,6 +3,8 @@ import axios from 'axios';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { Link } from 'react-router-dom';
+import API_BASE_URL from '../../../utils/config';
+
 
 const handleAddToCart = (productId) => {
     const token = localStorage.getItem('token');
@@ -11,7 +13,7 @@ const handleAddToCart = (productId) => {
         return;
     }
 
-    axios.post('http://localhost:8080/cart/add', {
+    axios.post(`${API_BASE_URL}/cart/add`, {
         productId: productId,
         quantity: 1
     }, {
@@ -27,7 +29,8 @@ const handleAddToCart = (productId) => {
 };
 
 const Shop = () => {
-    const [rangeValue, setRangeValue] = useState(0);
+    const [rangeValue, setRangeValue] = useState(10);
+    const [keyword, setKeyword] = useState('');
     const [products, setProducts] = useState([]);
     const [categories, setCategories] = useState([]);
     const [activeCategory, setActiveCategory] = useState('All Products');
@@ -37,9 +40,9 @@ const Shop = () => {
     const productsPerPage = 6;
 
     useEffect(() => {
-        fetchProducts(currentPage, productsPerPage);
+        fetchProducts(currentPage, productsPerPage, keyword, rangeValue);
 
-        axios.get('http://localhost:8080/categories')
+        axios.get(`${API_BASE_URL}/categories`)
             .then(response => {
                 setCategories(response.data);
             })
@@ -49,13 +52,13 @@ const Shop = () => {
     }, []);
 
     useEffect(() => {
-        fetchProducts(currentPage, productsPerPage);
-    }, [activeCategory, currentPage]);
+        fetchProducts(currentPage, productsPerPage, keyword, rangeValue);
+    }, [activeCategory, currentPage, keyword, rangeValue]);
 
-    const fetchProducts = (page, size) => {
+    const fetchProducts = (page, size, keyword, maxPrice) => {
         const endpoint = activeCategory === 'All Products'
-            ? `http://localhost:8080/products/page?page=${page - 1}&size=${size}`
-            : `http://localhost:8080/products/page?page=${page - 1}&size=${size}&category=${activeCategory}`;
+            ? `${API_BASE_URL}/products/search?page=${page - 1}&size=${size}&keyword=${keyword}&maxPrice=${maxPrice}`
+            : `${API_BASE_URL}/products/search?page=${page - 1}&size=${size}&keyword=${keyword}&maxPrice=${maxPrice}&category=${activeCategory}`;
 
         axios.get(endpoint)
             .then(response => {
@@ -81,6 +84,10 @@ const Shop = () => {
 
     const handleRangeChange = (event) => {
         setRangeValue(event.target.value);
+    };
+
+    const handleKeywordChange = (event) => {
+        setKeyword(event.target.value);
     };
 
     const paginate = (pageNumber) => setCurrentPage(pageNumber);
@@ -111,7 +118,7 @@ const Shop = () => {
                         </div>
                         <div className="modal-body d-flex align-items-center">
                             <div className="input-group w-75 mx-auto d-flex">
-                                <input type="search" className="form-control p-3" placeholder="keywords" aria-describedby="search-icon-1" />
+                                <input type="search" className="form-control p-3" placeholder="keywords" aria-describedby="search-icon-1" onChange={handleKeywordChange} />
                                 <span id="search-icon-1" className="input-group-text p-3"><i className="fa fa-search"></i></span>
                             </div>
                         </div>
@@ -134,7 +141,7 @@ const Shop = () => {
                             <div className="row g-4">
                                 <div className="col-xl-3">
                                     <div className="input-group w-100 mx-auto d-flex">
-                                        <input type="search" className="form-control p-3" placeholder="keywords" aria-describedby="search-icon-1" />
+                                        <input type="search" className="form-control p-3" placeholder="keywords" aria-describedby="search-icon-1" onChange={handleKeywordChange} />
                                         <span id="search-icon-1" className="input-group-text p-3"><i className="fa fa-search"></i></span>
                                     </div>
                                 </div>
@@ -188,7 +195,7 @@ const Shop = () => {
                                         <div className="col-lg-12">
                                             <div className="mb-3">
                                                 <h4 className="mb-2">Price</h4>
-                                                <input type="range" className="form-range w-100" id="rangeInput" name="rangeInput" min="0" max="500" value={rangeValue} onInput={handleRangeChange} />
+                                                <input type="range" className="form-range w-100" id="rangeInput" name="rangeInput" min="0" max="10" value={rangeValue} onInput={handleRangeChange} />
                                                 <output id="amount" name="amount" htmlFor="rangeInput">{rangeValue}</output>
                                             </div>
                                         </div>

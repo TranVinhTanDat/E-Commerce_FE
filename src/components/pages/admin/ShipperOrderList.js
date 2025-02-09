@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import API_BASE_URL from '../../../utils/config';
 
 function ShipperOrderList() {
     const [orders, setOrders] = useState([]);
@@ -13,7 +14,7 @@ function ShipperOrderList() {
     const fetchOrders = (date) => {
         const token = localStorage.getItem('token');
 
-        axios.get(`http://localhost:8080/orders/all-shipper?date=${date}`, {
+        axios.get(`${API_BASE_URL}/orders/all-shipper?date=${date}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         })
         .then(response => {
@@ -25,31 +26,45 @@ function ShipperOrderList() {
         });
     };
 
-    const handleMarkAsProcessing = (orderId) => {
+    // Chuyển trạng thái từ Processing -> Shipped
+    const handleMarkAsShipped = (orderId) => {
         const token = localStorage.getItem('token');
-        if (!orderId) {
-            console.error('Order ID is undefined');
-            return;
-        }
 
-        axios.post(`http://localhost:8080/orders/mark-as-processing/${orderId}`, {}, {
+        axios.post(`${API_BASE_URL}/orders/mark-as-shipped/${orderId}`, {}, {
             headers: { 'Authorization': `Bearer ${token}` }
         })
         .then(response => {
-            console.log('Response from mark as processing:', response);
-            alert('Order marked as Processing');
+            alert('Order marked as SHIPPED');
             setOrders(orders.map(order =>
-                order.orderId === orderId ? { ...order, status: 'Processing' } : order
+                order.orderId === orderId ? { ...order, status: 'SHIPPED' } : order
             ));
         })
         .catch(error => {
-            console.error('Error marking order as processing:', error);
+            console.error('Error marking order as shipped:', error);
+        });
+    };
+
+    // Chuyển trạng thái từ Shipped -> Delivered
+    const handleMarkAsDelivered = (orderId) => {
+        const token = localStorage.getItem('token');
+
+        axios.post(`${API_BASE_URL}/orders/mark-as-delivered/${orderId}`, {}, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        })
+        .then(response => {
+            alert('Order marked as DELIVERED');
+            setOrders(orders.map(order =>
+                order.orderId === orderId ? { ...order, status: 'DELIVERED' } : order
+            ));
+        })
+        .catch(error => {
+            console.error('Error marking order as delivered:', error);
         });
     };
 
     const handleViewDetails = (orderId) => {
         const token = localStorage.getItem('token');
-        axios.get(`http://localhost:8080/orders/details/${orderId}`, {
+        axios.get(`${API_BASE_URL}/orders/details/${orderId}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         })
         .then(response => {
@@ -58,7 +73,7 @@ function ShipperOrderList() {
             modal.show();
         })
         .catch(error => {
-            console.error('There was an error fetching the order details!', error);
+            console.error('Error fetching order details:', error);
         });
     };
 
@@ -70,8 +85,8 @@ function ShipperOrderList() {
     };
 
     return (
-        <div className="order-shipper-list-container container" style={{marginTop:'100px'}}>
-            <h1>Order List</h1>
+        <div className="order-shipper-list-container container" style={{ marginTop: '100px' }}>
+            <h1>Shipper Order List</h1>
             <div className="mb-4">
                 <label>Select Date: </label>
                 <input 
@@ -90,6 +105,7 @@ function ShipperOrderList() {
                         <th>Address Line 2</th>
                         <th>Phone</th>
                         <th>Total</th>
+                        <th>Status</th>
                         <th>Action</th>
                     </tr>
                 </thead>
@@ -103,9 +119,19 @@ function ShipperOrderList() {
                                 <td>{order.addressLine2}</td>
                                 <td>{order.phone}</td>
                                 <td>${order.total.toFixed(2)}</td>
+                                <td>{order.status}</td> 
                                 <td>
                                     <div className="action-buttons">
-                                        <button className="btn btn-success me-2" onClick={() => handleMarkAsProcessing(order.orderId)}>Đã giao hàng</button>
+                                        {/* Nếu đơn hàng đang Processing, hiện nút 'Đang giao hàng' */}
+                                        {order.status === 'PROCESSING' && (
+                                            <button className="btn btn-warning me-2" onClick={() => handleMarkAsShipped(order.orderId)}>Đang giao hàng</button>
+                                        )}
+
+                                        {/* Nếu đơn hàng đang Shipped, hiện nút 'Xác nhận đã giao hàng' */}
+                                        {order.status === 'SHIPPED' && (
+                                            <button className="btn btn-success me-2" onClick={() => handleMarkAsDelivered(order.orderId)}>Đã giao hàng</button>
+                                        )}
+
                                         <button className="btn btn-primary" onClick={() => handleViewDetails(order.orderId)}>Detail</button>
                                     </div>
                                 </td>

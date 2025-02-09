@@ -1,4 +1,6 @@
 // OrderPlaced.js
+import API_BASE_URL from '../../../utils/config';
+
 
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
@@ -12,7 +14,7 @@ function OrderPlaced() {
     useEffect(() => {
         const token = localStorage.getItem('token');
 
-        axios.get('http://localhost:8080/orders', {
+        axios.get(`${API_BASE_URL}/orders`, {
             headers: { 'Authorization': `Bearer ${token}` }
         })
         .then(response => {
@@ -32,6 +34,7 @@ function OrderPlaced() {
         setShowDialog(false);
         setSelectedOrder(null);
     };
+
 
     return (
         <div>

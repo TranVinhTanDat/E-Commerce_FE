@@ -1,3 +1,5 @@
+import API_BASE_URL from '../../../utils/config';
+
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
@@ -14,10 +16,11 @@ function Address() {
     });
     const [isNewAddress, setIsNewAddress] = useState(true); // Cờ để kiểm tra có phải địa chỉ mới hay không
     const [user, setUser] = useState({}); // Thêm state để lưu thông tin user
+    const [avatarUrl, setAvatarUrl] = useState(''); // State để lưu URL avatar mới
 
     useEffect(() => {
         const token = localStorage.getItem('token');
-        axios.get('http://localhost:8080/auth/user', {
+        axios.get(`${API_BASE_URL}/auth/user`, {
             headers: { 'Authorization': `Bearer ${token}` }
         })
         .then(response => {
@@ -27,7 +30,7 @@ function Address() {
             console.error('Error fetching user:', error);
         });
 
-        axios.get('http://localhost:8080/addresses/view', {
+        axios.get(`${API_BASE_URL}/addresses/view`, {
             headers: { 'Authorization': `Bearer ${token}` }
         })
         .then(response => {
@@ -41,6 +44,7 @@ function Address() {
         });
     }, []);
 
+    
     const handleChange = (e) => {
         setAddress({
             ...address,
@@ -50,7 +54,7 @@ function Address() {
 
     const handleCreate = () => {
         const token = localStorage.getItem('token');
-        axios.post('http://localhost:8080/addresses/Create', address, {
+        axios.post(`${API_BASE_URL}/addresses/create`, address, {
             headers: { 'Authorization': `Bearer ${token}` }
         })
         .then(response => {
@@ -65,7 +69,7 @@ function Address() {
 
     const handleUpdate = () => {
         const token = localStorage.getItem('token');
-        axios.put(`http://localhost:8080/addresses/${address.id}`, address, {
+        axios.put(`${API_BASE_URL}/addresses/${address.id}`, address, {
             headers: { 'Authorization': `Bearer ${token}` }
         })
         .then(response => {
@@ -76,12 +80,37 @@ function Address() {
         });
     };
 
+    const handleAvatarChange = () => {
+        const token = localStorage.getItem('token');
+        axios.put(`${API_BASE_URL}/auth/update-avatar`, { avatar: avatarUrl }, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        })
+        .then(response => {
+            setUser({ ...user, avatar: avatarUrl });
+            const modalElement = document.getElementById('avatarModal');
+            const modal = window.bootstrap.Modal.getInstance(modalElement);
+            modal.hide();
+        })
+        .catch(error => {
+            console.error('Error updating avatar:', error);
+        });
+    };
+    
+    
+    
+
     return (
-        <div className="container py-5" style={{marginTop:'100px'}}>
+        <div className="container py-5" style={{ marginTop: '100px' }}>
             <div className="row">
                 <div className="col-md-3">
                     {user.avatar && (
-                        <img src={user.avatar} alt="Avatar" className="img-fluid rounded-circle mb-4" />
+                        <>
+                            <img src={user.avatar} alt="Avatar" className="img-fluid rounded-circle mb-4" />
+                            <button type="button" className="btn btn-secondary mt-2" onClick={() => {
+                                const modal = new window.bootstrap.Modal(document.getElementById('avatarModal'));
+                                modal.show();
+                            }}>Edit Avatar</button>
+                        </>
                     )}
                 </div>
                 <div className="col-md-9">
@@ -121,6 +150,31 @@ function Address() {
                             <button type="button" className="btn btn-primary mt-4" onClick={handleUpdate}>Update</button>
                         )}
                     </form>
+                </div>
+            </div>
+
+            {/* Modal for updating avatar */}
+            <div className="modal fade" id="avatarModal" tabIndex="-1" aria-labelledby="avatarModalLabel" aria-hidden="true">
+                <div className="modal-dialog">
+                    <div className="modal-content">
+                        <div className="modal-header">
+                            <h5 className="modal-title" id="avatarModalLabel">Update Avatar</h5>
+                            <button type="button" className="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div className="modal-body">
+                            <input
+                                type="text"
+                                className="form-control"
+                                placeholder="Enter new avatar URL"
+                                value={avatarUrl}
+                                onChange={(e) => setAvatarUrl(e.target.value)}
+                            />
+                        </div>
+                        <div className="modal-footer">
+                            <button type="button" className="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                            <button type="button" className="btn btn-primary" onClick={handleAvatarChange}>Save changes</button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

@@ -1,6 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useParams } from 'react-router-dom';
+import API_BASE_URL from '../../../utils/config';
+
+
+import React, { useEffect, useState } from 'react';
+import axios from 'axios';
+import { useParams } from 'react-router-dom';
+import API_BASE_URL from '../../../utils/config';
+
 
 function OrderDetails() {
     const { orderId } = useParams();
@@ -9,7 +17,7 @@ function OrderDetails() {
     useEffect(() => {
         const fetchOrderDetails = async () => {
             try {
-                const response = await axios.get(`/orders/details/${orderId}`);
+                const response = await axios.get(`${API_BASE_URL}/orders/details/${orderId}`);
                 setOrder(response.data);
             } catch (error) {
                 console.error('Error fetching order details:', error);
@@ -20,7 +28,7 @@ function OrderDetails() {
     }, [orderId]);
 
     const handleMarkAsProcessing = () => {
-        axios.post(`/orders/mark-as-processing/${orderId}`)
+        axios.post(`${API_BASE_URL}/orders/mark-as-processing/${orderId}`)
             .then(() => {
                 setOrder(prevOrder => ({ ...prevOrder, status: 'Processing' }));
             })
@@ -32,6 +40,7 @@ function OrderDetails() {
     if (!order) {
         return <div>Loading...</div>;
     }
+
 
     return (
         <div className="order-details-container">
