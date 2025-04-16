@@ -139,10 +139,6 @@ function Checkout() {
         }
     };
     
-    
-    
-    
-
     return (
         <div>
             {/* Single Page Header start */}

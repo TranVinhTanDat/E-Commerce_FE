@@ -29,7 +29,7 @@ const handleAddToCart = (productId) => {
 };
 
 const Shop = () => {
-    const [rangeValue, setRangeValue] = useState(10);
+    const [rangeValue, setRangeValue] = useState(15000);
     const [keyword, setKeyword] = useState('');
     const [products, setProducts] = useState([]);
     const [categories, setCategories] = useState([]);
@@ -195,7 +195,7 @@ const Shop = () => {
                                         <div className="col-lg-12">
                                             <div className="mb-3">
                                                 <h4 className="mb-2">Price</h4>
-                                                <input type="range" className="form-range w-100" id="rangeInput" name="rangeInput" min="0" max="10" value={rangeValue} onInput={handleRangeChange} />
+                                                <input type="range" className="form-range w-100" id="rangeInput" name="rangeInput" min="0" max="40000" value={rangeValue} onInput={handleRangeChange} />
                                                 <output id="amount" name="amount" htmlFor="rangeInput">{rangeValue}</output>
                                             </div>
                                         </div>

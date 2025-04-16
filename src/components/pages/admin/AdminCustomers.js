@@ -153,37 +153,194 @@ const AdminCustomers = () => {
                 <button onClick={nextPage} disabled={currentPage === Math.ceil(filteredUsers.length / usersPerPage)}>Tiếp →</button>
             </div>
 
-            {/* Modal Thêm User */}
-            <Modal isOpen={isAddModalOpen} onRequestClose={() => setIsAddModalOpen(false)} contentLabel="Thêm Khách Hàng">
-                <h3>Thêm khách hàng</h3>
-                <input type="text" placeholder="Tên đăng nhập" value={newUser.username} onChange={(e) => setNewUser({ ...newUser, username: e.target.value })} />
-                <input type="email" placeholder="Email" value={newUser.email} onChange={(e) => setNewUser({ ...newUser, email: e.target.value })} />
-                <select value={newUser.role} onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}>
-                    <option value="USER">USER</option>
-                    <option value="ADMIN">ADMIN</option>
-                </select>
-                <button onClick={handleAddUser}>Thêm</button>
-                <button onClick={() => setIsAddModalOpen(false)}>Hủy</button>
-            </Modal>
+{/* Modal Thêm User */}
+<Modal 
+    isOpen={isAddModalOpen} 
+    onRequestClose={() => setIsAddModalOpen(false)} 
+    style={{ overlay: modalStyles.overlay, content: modalStyles.content }}
+    contentLabel="Thêm Khách Hàng"
+>
+    <h3 style={modalStyles.title}>Thêm khách hàng</h3>
+    <input 
+        type="text" 
+        placeholder="Tên đăng nhập" 
+        value={newUser.username} 
+        onChange={(e) => setNewUser({ ...newUser, username: e.target.value })} 
+        style={modalStyles.input}
+    />
+    <input 
+        type="email" 
+        placeholder="Email" 
+        value={newUser.email} 
+        onChange={(e) => setNewUser({ ...newUser, email: e.target.value })} 
+        style={modalStyles.input}
+    />
+    <select 
+        value={newUser.role} 
+        onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
+        style={modalStyles.select}
+    >
+        <option value="USER">USER</option>
+        <option value="ADMIN">ADMIN</option>
+    </select>
+    <div style={modalStyles.buttons}>
+        <button 
+            style={modalStyles.buttonConfirm} 
+            onMouseEnter={(e) => e.target.style.background = modalStyles.buttonConfirmHover.background}
+            onMouseLeave={(e) => e.target.style.background = modalStyles.buttonConfirm.background}
+            onClick={handleAddUser}
+        >
+            Thêm
+        </button>
+        <button 
+            style={modalStyles.buttonCancel} 
+            onMouseEnter={(e) => e.target.style.background = modalStyles.buttonCancelHover.background}
+            onMouseLeave={(e) => e.target.style.background = modalStyles.buttonCancel.background}
+            onClick={() => setIsAddModalOpen(false)}
+        >
+            Hủy
+        </button>
+    </div>
+</Modal>
 
-            {/* Modal Chỉnh Sửa User */}
-            <Modal isOpen={isEditModalOpen} onRequestClose={() => setIsEditModalOpen(false)} contentLabel="Chỉnh sửa khách hàng">
-                <h3>Chỉnh sửa khách hàng</h3>
-                {editUser && (
-                    <>
-                        <input type="text" value={editUser.username} onChange={(e) => setEditUser({ ...editUser, username: e.target.value })} />
-                        <input type="email" value={editUser.email} onChange={(e) => setEditUser({ ...editUser, email: e.target.value })} />
-                        <select value={editUser.role} onChange={(e) => setEditUser({ ...editUser, role: e.target.value })}>
-                            <option value="USER">USER</option>
-                            <option value="ADMIN">ADMIN</option>
-                        </select>
-                        <button onClick={handleEditUser}>Cập nhật</button>
-                        <button onClick={() => setIsEditModalOpen(false)}>Hủy</button>
-                    </>
-                )}
-            </Modal>
+{/* Modal Chỉnh Sửa User */}
+<Modal 
+    isOpen={isEditModalOpen} 
+    onRequestClose={() => setIsEditModalOpen(false)} 
+    style={{ overlay: modalStyles.overlay, content: modalStyles.content }}
+    contentLabel="Chỉnh sửa khách hàng"
+>
+    <h3 style={modalStyles.title}>Chỉnh sửa khách hàng</h3>
+    {editUser && (
+        <>
+            <input 
+                type="text" 
+                value={editUser.username} 
+                onChange={(e) => setEditUser({ ...editUser, username: e.target.value })} 
+                style={modalStyles.input}
+            />
+            <input 
+                type="email" 
+                value={editUser.email} 
+                onChange={(e) => setEditUser({ ...editUser, email: e.target.value })} 
+                style={modalStyles.input}
+            />
+            <select 
+                value={editUser.role} 
+                onChange={(e) => setEditUser({ ...editUser, role: e.target.value })}
+                style={modalStyles.select}
+            >
+                <option value="USER">USER</option>
+                <option value="ADMIN">ADMIN</option>
+            </select>
+            <div style={modalStyles.buttons}>
+                <button 
+                    style={modalStyles.buttonConfirm} 
+                    onMouseEnter={(e) => e.target.style.background = modalStyles.buttonConfirmHover.background}
+                    onMouseLeave={(e) => e.target.style.background = modalStyles.buttonConfirm.background}
+                    onClick={handleEditUser}
+                >
+                    Cập nhật
+                </button>
+                <button 
+                    style={modalStyles.buttonCancel} 
+                    onMouseEnter={(e) => e.target.style.background = modalStyles.buttonCancelHover.background}
+                    onMouseLeave={(e) => e.target.style.background = modalStyles.buttonCancel.background}
+                    onClick={() => setIsEditModalOpen(false)}
+                >
+                    Hủy
+                </button>
+            </div>
+        </>
+    )}
+</Modal>
+
         </div>
     );
 };
 
 export default AdminCustomers;
+
+
+const modalStyles = {
+    overlay: {
+        backgroundColor: "rgba(0, 0, 0, 0.5)", // Làm mờ nền khi mở modal
+        position: "fixed",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 1000
+    },
+    content: {
+        position: "relative",
+        background: "white",
+        padding: "20px",
+        width: "400px",
+        maxWidth: "90%",
+        borderRadius: "10px",
+        boxShadow: "0px 0px 20px rgba(0, 0, 0, 0.2)",
+        animation: "fadeIn 0.3s ease-in-out"
+    },
+    title: {
+        textAlign: "center",
+        fontSize: "22px",
+        fontWeight: "bold",
+        marginBottom: "15px"
+    },
+    input: {
+        width: "100%",
+        padding: "10px",
+        margin: "5px 0",
+        border: "1px solid #ccc",
+        borderRadius: "5px",
+        fontSize: "14px",
+        transition: "all 0.3s ease-in-out"
+    },
+    inputFocus: {
+        borderColor: "#4CAF50",
+        boxShadow: "0 0 5px rgba(76, 175, 80, 0.5)"
+    },
+    select: {
+        width: "100%",
+        padding: "10px",
+        border: "1px solid #ccc",
+        borderRadius: "5px",
+        fontSize: "14px",
+        marginBottom: "10px"
+    },
+    buttons: {
+        display: "flex",
+        justifyContent: "space-between",
+        marginTop: "15px"
+    },
+    buttonConfirm: {
+        background: "#4CAF50",
+        color: "white",
+        padding: "10px",
+        border: "none",
+        borderRadius: "5px",
+        cursor: "pointer",
+        fontSize: "14px",
+        transition: "0.3s"
+    },
+    buttonConfirmHover: {
+        background: "#388E3C"
+    },
+    buttonCancel: {
+        background: "#d32f2f",
+        color: "white",
+        padding: "10px",
+        border: "none",
+        borderRadius: "5px",
+        cursor: "pointer",
+        fontSize: "14px",
+        transition: "0.3s"
+    },
+    buttonCancelHover: {
+        background: "#b71c1c"
+    }
+};

@@ -57,27 +57,47 @@ function AdminOrderList() {
             }
         });
     };
-    
-    
+
     const handleViewDetails = (orderId) => {
-        console.log("Fetching details for Order ID:", orderId);
+        console.log("Đang lấy chi tiết cho Order ID:", orderId);
         const token = localStorage.getItem('token');
+        
+        if (!token) {
+            console.error("Không tìm thấy token trong localStorage. Chuyển hướng đến đăng nhập...");
+            window.location.href = '/login';
+            return;
+        }
     
-        axios.get(`${API_BASE_URL}/orders/details/${orderId}`, {
+        axios.get(`${API_BASE_URL}/admin/orders/details/${orderId}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         })
         .then(response => {
-            console.log("API Response:", response.data);
+            console.log("Phản hồi API:", response.data);
             if (response.data) {
                 setSelectedOrder(response.data);
                 setIsModalOpen(true);
-                console.log("Updated Selected Order:", response.data);
             }
         })
-        .catch(error => console.error('Error fetching order details:', error));
+        .catch(error => {
+            console.error('Lỗi lấy chi tiết đơn hàng:', error);
+            if (error.response) {
+                console.error('Mã trạng thái:', error.response.status);
+                console.error('Dữ liệu phản hồi:', error.response.data);
+                if (error.response.status === 401 || error.response.status === 403) {
+                    localStorage.removeItem('token');
+                    window.location.href = '/login';
+                } else {
+                    alert(`Lỗi: ${error.response.status} - ${error.response.data}`);
+                }
+            } else if (error.request) {
+                console.error('Không nhận được phản hồi:', error.request);
+                alert('Không thể kết nối tới server. Vui lòng kiểm tra backend.');
+            } else {
+                console.error('Lỗi thiết lập yêu cầu:', error.message);
+                alert('Có lỗi bất ngờ xảy ra.');
+            }
+        });
     };
-    
-    
 
     const handleSearch = (e) => {
         setSearchQuery(e.target.value);
@@ -101,14 +121,21 @@ function AdminOrderList() {
         setSelectedOrder(null);
         setIsModalOpen(false);
     };
-    
-    
+
     useEffect(() => {
         console.log("Selected Order:", selectedOrder);
     }, [selectedOrder]);
-    
+
     return (
         <div className="admin-order-list-container">
+            <style>
+                {`
+                    .order-table th {
+                        color: black !important;
+                        font-weight: bold;
+                    }
+                `}
+            </style>
             <h1>Order List</h1>
 
             <div className="top-controls">
@@ -151,7 +178,7 @@ function AdminOrderList() {
                                 <td>{order.status}</td>
                                 <td>
                                     <div>
-                                    {order.status === 'PENDING' && (
+                                        {order.status === 'PENDING' && (
                                             <>
                                                 <button className="btn btn-success me-2" onClick={() => handleUpdateOrderStatus(order.orderId, 'PROCESSING')}>
                                                     Xác nhận
@@ -161,8 +188,6 @@ function AdminOrderList() {
                                                 </button>
                                             </>
                                         )}
-
-
 
                                         {order.status === 'PROCESSING' && (
                                             <button className="btn btn-warning me-2" onClick={() => handleUpdateOrderStatus(order.orderId, 'SHIPPED')}>
@@ -192,53 +217,50 @@ function AdminOrderList() {
                     </tbody>
                 </table>
             </div>
-            {isModalOpen && (
-    <div className="modal-overlay">
-        <div className="modal-container">
-            <div className="modal-header">
-                <h5 className="modal-title">Order Details</h5>
-                <button type="button" className="btn-close" onClick={handleCloseModal}></button>
-            </div>
-            <div className="modal-body">
-                {selectedOrder && (
-                    <>
-                        <p><strong>Order ID:</strong> {selectedOrder.id}</p>
-                        <p><strong>Status:</strong> {selectedOrder.status}</p>
-                        <p><strong>Created At:</strong> {new Date(selectedOrder.createdAt).toLocaleString()}</p>
-                        <p><strong>Updated At:</strong> {new Date(selectedOrder.updatedAt).toLocaleString()}</p>
 
-                        <h6 className="mt-3">Items:</h6>
-                        <div className="order-items-container">
-                            {selectedOrder.items?.length > 0 ? (
-                                selectedOrder.items.map(item => (
-                                    <div className="order-item" key={item.id}>
-                                        <img src={item.product.image} alt={item.product.name} className="order-item-image" />
-                                        <div className="order-item-info">
-                                            <p><strong>Product:</strong> {item.product.name}</p>
-                                            <p><strong>Quantity:</strong> {item.quantity}</p>
-                                            <p><strong>Price:</strong> ${item.price?.toFixed(2) ?? "N/A"}</p>
-                                        </div>
+            {isModalOpen && (
+                <div className="modal-overlay">
+                    <div className="modal-container">
+                        <div className="modal-header">
+                            <h5 className="modal-title">Order Details</h5>
+                            <button type="button" className="btn-close" onClick={handleCloseModal}></button>
+                        </div>
+                        <div className="modal-body">
+                            {selectedOrder && (
+                                <>
+                                    <p><strong>Order ID:</strong> {selectedOrder.id}</p>
+                                    <p><strong>Status:</strong> {selectedOrder.status}</p>
+                                    <p><strong>Created At:</strong> {new Date(selectedOrder.createdAt).toLocaleString()}</p>
+                                    <p><strong>Updated At:</strong> {new Date(selectedOrder.updatedAt).toLocaleString()}</p>
+
+                                    <h6 className="mt-3">Items:</h6>
+                                    <div className="order-items-container">
+                                        {selectedOrder.items?.length > 0 ? (
+                                            selectedOrder.items.map(item => (
+                                                <div className="order-item" key={item.id}>
+                                                    <img src={item.image} alt={item.productName} className="order-item-image" />
+                                                    <div className="order-item-info">
+                                                        <p><strong>Product:</strong> {item.productName}</p>
+                                                        <p><strong>Quantity:</strong> {item.quantity}</p>
+                                                        <p><strong>Price:</strong> ${item.price?.toFixed(2) ?? "N/A"}</p>
+                                                    </div>
+                                                </div>
+                                            ))
+                                        ) : (
+                                            <p>No items available.</p>
+                                        )}
                                     </div>
-                                ))
-                            ) : (
-                                <p>No items available.</p>
+
+                                    <div className="order-total">
+                                        <h5>Total: ${selectedOrder.total?.toFixed(2) ?? "N/A"}</h5>
+                                    </div>
+                                </>
                             )}
                         </div>
+                    </div>
+                </div>
+            )}
 
-                        {/* Hiển thị tổng tiền của đơn hàng ở cuối, căn phải */}
-                        <div className="order-total">
-                            <h5>Total: ${selectedOrder.total?.toFixed(2) ?? "N/A"}</h5>
-                        </div>
-                    </>
-                )}
-            </div>
-        </div>
-    </div>
-)}
-
-
-
-            {/* Phân trang hợp lý */}
             <div className="pagination">
                 {currentPage > 1 && (
                     <button onClick={() => paginate(currentPage - 1)} className="page-btn">Prev</button>

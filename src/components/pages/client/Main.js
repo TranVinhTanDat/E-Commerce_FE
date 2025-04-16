@@ -9,7 +9,7 @@ import API_BASE_URL from '../../../utils/config';
 export default function Main() {
     const [products, setProducts] = useState([]);
     const [categories, setCategories] = useState([]);
-    const [activeCategory, setActiveCategory] = useState('All Products');
+    const [activeCategory, setActiveCategory] = useState('All');
     const [showAllProducts, setShowAllProducts] = useState(false);
 
     useEffect(() => {
@@ -52,7 +52,7 @@ export default function Main() {
         });
     };
 
-    const filteredProducts = activeCategory === 'All Products' 
+    const filteredProducts = activeCategory === 'All' 
         ? products 
         : products.filter(product => product.category.name === activeCategory);
 
@@ -174,13 +174,13 @@ export default function Main() {
                     <div className="tab-class text-center">
                         <div className="row g-4">
                             <div className="col-lg-4 text-start">
-                                <h1>Our Organic Products</h1>
+                                <h1>Sản phẩm hữu cơ</h1>
                             </div>
                             <div className="col-lg-8 text-end">
                                 <ul className="nav nav-pills d-inline-flex text-center mb-5">
                                     <li className="nav-item">
-                                        <a className={`d-flex m-2 py-2 bg-light rounded-pill ${activeCategory === 'All Products' ? 'active' : ''}`} onClick={() => setActiveCategory('All Products')} style={{ cursor: 'pointer' }}>
-                                            <span className="text-dark" style={{ width: '130px' }}>All Products</span>
+                                        <a className={`d-flex m-2 py-2 bg-light rounded-pill ${activeCategory === 'All' ? 'active' : ''}`} onClick={() => setActiveCategory('All')} style={{ cursor: 'pointer' }}>
+                                            <span className="text-dark" style={{ width: '130px' }}>All</span>
                                         </a>
                                     </li>
                                     {categories.map(category => (
@@ -237,7 +237,7 @@ export default function Main() {
             <div className="container-fluid py-5">
                 <div className="container py-5">
                     <div className="text-center mx-auto mb-5" style={{ maxWidth: '700px' }}>
-                        <h1 className="display-4">Bestseller Products</h1>
+                        <h1 className="display-4">Bestseller</h1>
                         <p style={{color:'black'}}>Latin words, combined with a handful of model sentence structures, to generate Lorem Ipsum which looks reasonable.</p>
                     </div>
                     <div className="row g-4">

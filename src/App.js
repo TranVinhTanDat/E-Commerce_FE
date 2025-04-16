@@ -1,5 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
+import 'remixicon/fonts/remixicon.css';
+
 import ClientNavbar from './components/layout/client/Navbar'; 
 import ClientFooter from './components/layout/client/Footer'; 
 import AdminLayout from './components/layout/admin/AdminLayout'; // Import AdminLayout
@@ -25,6 +27,7 @@ import ChangePassword from './components/pages/client/ChangePassword';
 import ForgotPassword from './components/pages/client/ForgotPassword';
 import VerifyOtp from './components/pages/client/VerifyOtp';
 import ResetPassword from './components/pages/client/ResetPassword';
+// import ChatClient from './components/pages/client/ChatClient';
 
 // Admin
 import AdminOrderList from './components/pages/admin/AdminOrderList'; 
@@ -34,6 +37,8 @@ import AdminDashboard from './components/pages/admin/AdminDashboard';
 import { ToastContainer } from 'react-toastify';
 import ProductList from './components/pages/admin/ProductList';
 import AdminCustomers from './components/pages/admin/AdminCustomers';
+import AdminChat from './components/pages/admin/AdminChat';
+
 // import ProductListExample from './components/pages/admin/ProductListExample';
 
 
@@ -54,6 +59,7 @@ function App() {
                         <Route path="/admin/productList" element={<ProductList />} />
                         {/* <Route path="/admin/productListExample" element={<ProductListExample />} /> */}
                         <Route path="/admin/customers" element={<AdminCustomers />} />
+                        <Route path="/admin/chat" element={<AdminChat />} />
 
                     </Routes>
                 </AdminLayout>
@@ -82,6 +88,7 @@ function App() {
                         <Route path="/forgot-password" element={<ForgotPassword />} />
                         <Route path="/verify-otp" element={<VerifyOtp />} />
                         <Route path="/reset-password" element={<ResetPassword />} />
+                        {/* <Route path="/chat" element={<ChatClient username="customer" />} /> */}
 
                     </Routes>
                     {!isAuthPage && <ClientFooter />} {/* Footer cho trang client */}

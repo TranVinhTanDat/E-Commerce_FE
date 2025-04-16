@@ -11,7 +11,6 @@ function OrderHistory() {
     const [selectedOrder, setSelectedOrder] = useState(null);
     const modalRef = useRef(null);
 
-    // ✅ Gọi API để lấy danh sách đơn hàng theo trạng thái
     useEffect(() => {
         fetchOrders(statusFilter);
     }, [statusFilter]);
@@ -34,12 +33,12 @@ function OrderHistory() {
         });
     };
 
-    // ✅ Lấy chi tiết đơn hàng khi nhấn "View Details"
     const fetchOrderDetails = (orderId) => {
         axios.get(`${API_BASE_URL}/orders/details/${orderId}`, {
             headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
         })
         .then(response => {
+            console.log("Order Details:", response.data); // Debug
             setSelectedOrder(response.data);
             if (modalRef.current) {
                 const modal = new window.bootstrap.Modal(modalRef.current);
@@ -55,7 +54,6 @@ function OrderHistory() {
         <div className="order-history-container">
             <h1 className="mb-4 text-center">📦 Order History</h1>
 
-            {/* ✅ Tabs lọc đơn hàng theo trạng thái */}
             <Tabs 
                 id="order-status-tabs" 
                 activeKey={statusFilter} 
@@ -71,7 +69,6 @@ function OrderHistory() {
                 <Tab eventKey="REFUNDED" title="Refunded" />
             </Tabs>
 
-            {/* ✅ Danh sách đơn hàng hiển thị theo trạng thái */}
             <div className="order-list">
                 <div className="row">
                     {orders.length === 0 ? (
@@ -115,7 +112,6 @@ function OrderHistory() {
                 </div>
             </div>
 
-            {/* ✅ Modal hiển thị chi tiết đơn hàng */}
             <div className="modal fade" ref={modalRef} id="orderDetailModal" tabIndex="-1" aria-labelledby="orderDetailModalLabel" aria-hidden="true">
                 <div className="modal-dialog modal-lg">
                     <div className="modal-content">
@@ -131,20 +127,22 @@ function OrderHistory() {
                                     <p><strong>Status:</strong> {selectedOrder.status}</p>
                                     <p><strong>Created At:</strong> {new Date(selectedOrder.createdAt).toLocaleString()}</p>
                                     <p><strong>Updated At:</strong> {new Date(selectedOrder.updatedAt).toLocaleString()}</p>
+                                    <p><strong>Customer:</strong> {selectedOrder.userName}</p>
+                                    <p><strong>Email:</strong> {selectedOrder.userEmail}</p>
 
                                     <h6 className="mt-3">🛒 Items:</h6>
                                     <div className="list-group">
-                                        {selectedOrder.items.length > 0 ? (
+                                        {selectedOrder.items?.length > 0 ? (
                                             selectedOrder.items.map(item => (
                                                 <div className="list-group-item d-flex align-items-center" key={item.id}>
                                                     <img 
-                                                        src={item.product.image} 
-                                                        alt={item.product.name} 
+                                                        src={item.image || '/fallback-image.jpg'} 
+                                                        alt={item.productName || 'Product'} 
                                                         className="rounded"
                                                         style={{ width: '70px', height: '70px', objectFit: 'cover' }} 
                                                     />
                                                     <div style={{ flex: 1 }}>
-                                                        <p className="mb-1"><strong>{item.product.name}</strong></p>
+                                                        <p className="mb-1"><strong>{item.productName || 'N/A'}</strong></p>
                                                         <p className="mb-1">Qty: {item.quantity}</p>
                                                         <p className="mb-1 text-danger fw-bold">Price: ${item.price.toFixed(2)}</p>
                                                     </div>

@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import API_BASE_URL from '../../../utils/config';
+
 import { Button, Dialog, DialogActions, DialogContent, DialogTitle, TextField, MenuItem, Select, InputLabel, FormControl, Table, TableHead, TableBody, TableRow, TableCell, Snackbar, Alert } from '@mui/material';
 
 const ProductList = () => {
@@ -49,7 +51,7 @@ const ProductList = () => {
 
     const fetchProducts = async (page) => {
         try {
-            const response = await axios.get(`http://localhost:8080/admin/products/page?page=${page}&size=10`, {
+            const response = await axios.get(`${API_BASE_URL}/admin/products/page?page=${page}&size=10`, {
                 headers: {
                     Authorization: `Bearer ${localStorage.getItem('token')}`
                 }
@@ -63,7 +65,7 @@ const ProductList = () => {
 
     const fetchCategories = async () => {
         try {
-            const response = await axios.get('http://localhost:8080/categories');
+            const response = await axios.get(`${API_BASE_URL}/categories`);
             setCategories(response.data);
         } catch (e) {
             console.log('Error fetching categories:', e);
@@ -72,7 +74,7 @@ const ProductList = () => {
 
     const handleSearch = async () => {
         try {
-            const response = await axios.get(`http://localhost:8080/admin/products/Search?keyword=${searchKeyword}`, {
+            const response = await axios.get(`${API_BASE_URL}/admin/products/Search?keyword=${searchKeyword}`, {
                 headers: {
                     Authorization: `Bearer ${localStorage.getItem('token')}`
                 }
@@ -115,10 +117,10 @@ const ProductList = () => {
             };
 
             if (editingProduct) {
-                await axios.put(`http://localhost:8080/admin/products/edit-product/${editingProduct}`, newProduct, config);
+                await axios.put(`${API_BASE_URL}/admin/products/edit-product/${editingProduct}`, newProduct, config);
                 setAlertMessage('Sửa sản phẩm thành công!');
             } else {
-                await axios.post('http://localhost:8080/admin/products/add-product', newProduct, config);
+                await axios.post(`${API_BASE_URL}/admin/products/add-product`, newProduct, config);
                 setAlertMessage('Thêm sản phẩm thành công!');
             }
             setAlertOpen(true); 
@@ -136,7 +138,7 @@ const ProductList = () => {
 
     const handleConfirmDelete = async () => {
         try {
-            await axios.delete(`http://localhost:8080/admin/products/delete-product`, {
+            await axios.delete(`${API_BASE_URL}/admin/products/delete-product`, {
                 headers: {
                     Authorization: `Bearer ${localStorage.getItem('token')}`
                 },
