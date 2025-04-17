@@ -17,13 +17,13 @@ function ShipperOrderList() {
         axios.get(`${API_BASE_URL}/orders/all-shipper?date=${date}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         })
-        .then(response => {
-            console.log('Orders fetched:', response.data);
-            setOrders(response.data);
-        })
-        .catch(error => {
-            console.error('Error fetching orders:', error);
-        });
+            .then(response => {
+                console.log('Orders fetched:', response.data);
+                setOrders(response.data);
+            })
+            .catch(error => {
+                console.error('Error fetching orders:', error);
+            });
     };
 
     // Chuyển trạng thái từ Processing -> Shipped
@@ -33,15 +33,15 @@ function ShipperOrderList() {
         axios.post(`${API_BASE_URL}/orders/mark-as-shipped/${orderId}`, {}, {
             headers: { 'Authorization': `Bearer ${token}` }
         })
-        .then(response => {
-            alert('Order marked as SHIPPED');
-            setOrders(orders.map(order =>
-                order.orderId === orderId ? { ...order, status: 'SHIPPED' } : order
-            ));
-        })
-        .catch(error => {
-            console.error('Error marking order as shipped:', error);
-        });
+            .then(response => {
+                alert('Order marked as SHIPPED');
+                setOrders(orders.map(order =>
+                    order.orderId === orderId ? { ...order, status: 'SHIPPED' } : order
+                ));
+            })
+            .catch(error => {
+                console.error('Error marking order as shipped:', error);
+            });
     };
 
     // Chuyển trạng thái từ Shipped -> Delivered
@@ -51,15 +51,15 @@ function ShipperOrderList() {
         axios.post(`${API_BASE_URL}/orders/mark-as-delivered/${orderId}`, {}, {
             headers: { 'Authorization': `Bearer ${token}` }
         })
-        .then(response => {
-            alert('Order marked as DELIVERED');
-            setOrders(orders.map(order =>
-                order.orderId === orderId ? { ...order, status: 'DELIVERED' } : order
-            ));
-        })
-        .catch(error => {
-            console.error('Error marking order as delivered:', error);
-        });
+            .then(response => {
+                alert('Order marked as DELIVERED');
+                setOrders(orders.map(order =>
+                    order.orderId === orderId ? { ...order, status: 'DELIVERED' } : order
+                ));
+            })
+            .catch(error => {
+                console.error('Error marking order as delivered:', error);
+            });
     };
 
     const handleViewDetails = (orderId) => {
@@ -67,14 +67,14 @@ function ShipperOrderList() {
         axios.get(`${API_BASE_URL}/orders/details/${orderId}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         })
-        .then(response => {
-            setSelectedOrder(response.data);
-            const modal = new window.bootstrap.Modal(document.getElementById('orderDetailModal'));
-            modal.show();
-        })
-        .catch(error => {
-            console.error('Error fetching order details:', error);
-        });
+            .then(response => {
+                setSelectedOrder(response.data);
+                const modal = new window.bootstrap.Modal(document.getElementById('orderDetailModal'));
+                modal.show();
+            })
+            .catch(error => {
+                console.error('Error fetching order details:', error);
+            });
     };
 
     const handleCloseModal = () => {
@@ -89,10 +89,10 @@ function ShipperOrderList() {
             <h1>Shipper Order List</h1>
             <div className="mb-4">
                 <label>Select Date: </label>
-                <input 
-                    type="date" 
-                    value={selectedDate} 
-                    onChange={(e) => setSelectedDate(e.target.value)} 
+                <input
+                    type="date"
+                    value={selectedDate}
+                    onChange={(e) => setSelectedDate(e.target.value)}
                     className="form-control"
                 />
             </div>
@@ -119,7 +119,7 @@ function ShipperOrderList() {
                                 <td>{order.addressLine2}</td>
                                 <td>{order.phone}</td>
                                 <td>${order.total.toFixed(2)}</td>
-                                <td>{order.status}</td> 
+                                <td>{order.status}</td>
                                 <td>
                                     <div className="action-buttons">
                                         {/* Nếu đơn hàng đang Processing, hiện nút 'Đang giao hàng' */}
@@ -161,9 +161,13 @@ function ShipperOrderList() {
                                         {selectedOrder.items && selectedOrder.items.length > 0 ? (
                                             selectedOrder.items.map(item => (
                                                 <li className="list-group-item order-item" key={item.id}>
-                                                    <img src={item.product.image} alt={item.product.name} style={{ width: '90px', height: '90px' }} />
+                                                    <img
+                                                        src={item.image || 'path/to/fallback-image.jpg'} // Sử dụng item.image và cung cấp ảnh dự phòng
+                                                        alt={item.productName}
+                                                        style={{ width: '90px', height: '90px' }}
+                                                    />
                                                     <div className="order-item-details">
-                                                        <p><strong>Product:</strong> {item.product.name}</p>
+                                                        <p><strong>Product:</strong> {item.productName}</p>
                                                         <p><strong>Quantity:</strong> {item.quantity}</p>
                                                     </div>
                                                     <div className="order-item-price">
@@ -175,7 +179,7 @@ function ShipperOrderList() {
                                                 </li>
                                             ))
                                         ) : (
-                                            <p>No items available.</p>
+                                            <p>Không có sản phẩm nào.</p>
                                         )}
                                     </ul>
                                 </>

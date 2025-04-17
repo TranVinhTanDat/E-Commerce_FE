@@ -1,8 +1,14 @@
 import React from 'react';
-import Navbar from './navbar';
+import NavbarAdmin from './NavbarAdmin';
+import NavbarEmployee from './NavbarEmployee';
 import Header from './header';
 
 const AdminLayout = ({ children }) => {
+    const role = localStorage.getItem('role'); // Lấy role từ localStorage
+
+    // Chọn navbar dựa trên role
+    const Navbar = role === 'EMPLOYEE' ? NavbarEmployee : NavbarAdmin;
+
     return (
         <div className="layout-wrapper">
             <Navbar />
@@ -15,4 +21,7 @@ const AdminLayout = ({ children }) => {
         </div>
     );
 };
+
+
+
 export default AdminLayout;

@@ -36,7 +36,14 @@ function Login() {
                 }
 
                 setTimeout(() => {
-                    navigate(userRole === 'ADMIN' ? '/admin/dashboard' : '/');
+                   // Chuyển hướng dựa trên role
+                        if (userRole === 'ADMIN') {
+                            navigate('/admin/dashboard');
+                        } else if (userRole === 'EMPLOYEE') {
+                            navigate('/admin/orderList'); // Chuyển hướng đến trang Orders cho EMPLOYEE
+                        } else {
+                            navigate('/'); // Trang chính cho các role khác (USER)
+                        }
                 }, 1500);
             })
             .catch(error => {

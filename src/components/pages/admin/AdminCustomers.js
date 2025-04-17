@@ -8,14 +8,15 @@ Modal.setAppElement("#root");
 
 const AdminCustomers = () => {
     const [users, setUsers] = useState([]);
-    const [newUser, setNewUser] = useState({ username: "", email: "", role: "USER" });
+    const [newUser, setNewUser] = useState({ username: "", email: "", password: "", role: "USER" });
     const [editUser, setEditUser] = useState(null);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-    
+    const [errorMessage, setErrorMessage] = useState("");
+
     // Phân trang
     const [currentPage, setCurrentPage] = useState(1);
-    const usersPerPage = 9; 
+    const usersPerPage = 9;
 
     // Ô tìm kiếm
     const [searchQuery, setSearchQuery] = useState("");
@@ -26,6 +27,7 @@ const AdminCustomers = () => {
             setUsers(response.data);
         } catch (error) {
             console.error("Error fetching users:", error);
+            setErrorMessage("Không thể tải danh sách khách hàng");
         }
     };
 
@@ -38,7 +40,6 @@ const AdminCustomers = () => {
         (user.username && user.username.toLowerCase().includes(searchQuery.toLowerCase())) ||
         (user.email && user.email.toLowerCase().includes(searchQuery.toLowerCase()))
     );
-    
 
     // Tính toán danh sách user trong trang hiện tại
     const indexOfLastUser = currentPage * usersPerPage;
@@ -62,17 +63,23 @@ const AdminCustomers = () => {
     const handleAddUser = async () => {
         try {
             await axiosInstance.post(`${API_BASE_URL}/add-user`, newUser);
-            setNewUser({ username: "", email: "", role: "USER" });
+            setNewUser({ username: "", email: "", password: "", role: "USER" });
             setIsAddModalOpen(false);
             fetchUsers();
+            alert("Thêm khách hàng thành công!");
         } catch (error) {
             console.error("Error adding user:", error);
+            if (error.response) {
+                setErrorMessage(error.response.data.message || "Không thể thêm khách hàng");
+            } else {
+                setErrorMessage("Không thể kết nối đến server");
+            }
         }
     };
 
     // Mở modal chỉnh sửa user
     const openEditModal = (user) => {
-        setEditUser(user);
+        setEditUser({ ...user, password: "" });
         setIsEditModalOpen(true);
     };
 
@@ -82,8 +89,14 @@ const AdminCustomers = () => {
             await axiosInstance.put(`${API_BASE_URL}/edit-user/${editUser.id}`, editUser);
             setIsEditModalOpen(false);
             fetchUsers();
+            alert("Cập nhật khách hàng thành công!");
         } catch (error) {
             console.error("Error updating user:", error);
+            if (error.response) {
+                setErrorMessage(error.response.data.message || "Không thể cập nhật khách hàng");
+            } else {
+                setErrorMessage("Không thể kết nối đến server");
+            }
         }
     };
 
@@ -93,8 +106,14 @@ const AdminCustomers = () => {
             try {
                 await axiosInstance.delete(`${API_BASE_URL}/delete-user/${id}`);
                 fetchUsers();
+                alert("Xóa khách hàng thành công!");
             } catch (error) {
                 console.error("Error deleting user:", error);
+                if (error.response) {
+                    setErrorMessage(error.response.data.message || "Không thể xóa khách hàng");
+                } else {
+                    setErrorMessage("Không thể kết nối đến server");
+                }
             }
         }
     };
@@ -103,8 +122,15 @@ const AdminCustomers = () => {
         <div className="admin-customers">
             <h2>Danh sách khách hàng</h2>
 
+            {/* Hiển thị thông báo lỗi */}
+            {errorMessage && (
+                <div style={{ color: "red", marginBottom: "10px" }}>
+                    {errorMessage}
+                </div>
+            )}
+
             {/* Ô tìm kiếm */}
-            <input 
+            <input
                 type="text"
                 placeholder="Tìm kiếm theo tên hoặc email..."
                 value={searchQuery}
@@ -118,7 +144,9 @@ const AdminCustomers = () => {
                 }}
             />
 
-            <button className="btn-add" onClick={() => setIsAddModalOpen(true)}> + Thêm Khách Hàng</button>
+            <button className="btn-add" onClick={() => setIsAddModalOpen(true)}>
+                + Thêm
+            </button>
 
             <table border="1">
                 <thead>
@@ -153,118 +181,134 @@ const AdminCustomers = () => {
                 <button onClick={nextPage} disabled={currentPage === Math.ceil(filteredUsers.length / usersPerPage)}>Tiếp →</button>
             </div>
 
-{/* Modal Thêm User */}
-<Modal 
-    isOpen={isAddModalOpen} 
-    onRequestClose={() => setIsAddModalOpen(false)} 
-    style={{ overlay: modalStyles.overlay, content: modalStyles.content }}
-    contentLabel="Thêm Khách Hàng"
->
-    <h3 style={modalStyles.title}>Thêm khách hàng</h3>
-    <input 
-        type="text" 
-        placeholder="Tên đăng nhập" 
-        value={newUser.username} 
-        onChange={(e) => setNewUser({ ...newUser, username: e.target.value })} 
-        style={modalStyles.input}
-    />
-    <input 
-        type="email" 
-        placeholder="Email" 
-        value={newUser.email} 
-        onChange={(e) => setNewUser({ ...newUser, email: e.target.value })} 
-        style={modalStyles.input}
-    />
-    <select 
-        value={newUser.role} 
-        onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
-        style={modalStyles.select}
-    >
-        <option value="USER">USER</option>
-        <option value="ADMIN">ADMIN</option>
-    </select>
-    <div style={modalStyles.buttons}>
-        <button 
-            style={modalStyles.buttonConfirm} 
-            onMouseEnter={(e) => e.target.style.background = modalStyles.buttonConfirmHover.background}
-            onMouseLeave={(e) => e.target.style.background = modalStyles.buttonConfirm.background}
-            onClick={handleAddUser}
-        >
-            Thêm
-        </button>
-        <button 
-            style={modalStyles.buttonCancel} 
-            onMouseEnter={(e) => e.target.style.background = modalStyles.buttonCancelHover.background}
-            onMouseLeave={(e) => e.target.style.background = modalStyles.buttonCancel.background}
-            onClick={() => setIsAddModalOpen(false)}
-        >
-            Hủy
-        </button>
-    </div>
-</Modal>
-
-{/* Modal Chỉnh Sửa User */}
-<Modal 
-    isOpen={isEditModalOpen} 
-    onRequestClose={() => setIsEditModalOpen(false)} 
-    style={{ overlay: modalStyles.overlay, content: modalStyles.content }}
-    contentLabel="Chỉnh sửa khách hàng"
->
-    <h3 style={modalStyles.title}>Chỉnh sửa khách hàng</h3>
-    {editUser && (
-        <>
-            <input 
-                type="text" 
-                value={editUser.username} 
-                onChange={(e) => setEditUser({ ...editUser, username: e.target.value })} 
-                style={modalStyles.input}
-            />
-            <input 
-                type="email" 
-                value={editUser.email} 
-                onChange={(e) => setEditUser({ ...editUser, email: e.target.value })} 
-                style={modalStyles.input}
-            />
-            <select 
-                value={editUser.role} 
-                onChange={(e) => setEditUser({ ...editUser, role: e.target.value })}
-                style={modalStyles.select}
+            {/* Modal Thêm User */}
+            <Modal
+                isOpen={isAddModalOpen}
+                onRequestClose={() => setIsAddModalOpen(false)}
+                style={{ overlay: modalStyles.overlay, content: modalStyles.content }}
+                contentLabel="Thêm Khách Hàng"
             >
-                <option value="USER">USER</option>
-                <option value="ADMIN">ADMIN</option>
-            </select>
-            <div style={modalStyles.buttons}>
-                <button 
-                    style={modalStyles.buttonConfirm} 
-                    onMouseEnter={(e) => e.target.style.background = modalStyles.buttonConfirmHover.background}
-                    onMouseLeave={(e) => e.target.style.background = modalStyles.buttonConfirm.background}
-                    onClick={handleEditUser}
+                <h3 style={modalStyles.title}>Thêm khách hàng</h3>
+                <input
+                    type="text"
+                    placeholder="Tên đăng nhập"
+                    value={newUser.username}
+                    onChange={(e) => setNewUser({ ...newUser, username: e.target.value })}
+                    style={modalStyles.input}
+                />
+                <input
+                    type="email"
+                    placeholder="Email"
+                    value={newUser.email}
+                    onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                    style={modalStyles.input}
+                />
+                <input
+                    type="password"
+                    placeholder="Mật khẩu"
+                    value={newUser.password}
+                    onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                    style={modalStyles.input}
+                />
+                <select
+                    value={newUser.role}
+                    onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
+                    style={modalStyles.select}
                 >
-                    Cập nhật
-                </button>
-                <button 
-                    style={modalStyles.buttonCancel} 
-                    onMouseEnter={(e) => e.target.style.background = modalStyles.buttonCancelHover.background}
-                    onMouseLeave={(e) => e.target.style.background = modalStyles.buttonCancel.background}
-                    onClick={() => setIsEditModalOpen(false)}
-                >
-                    Hủy
-                </button>
-            </div>
-        </>
-    )}
-</Modal>
+                    <option value="USER">USER</option>
+                    <option value="ADMIN">ADMIN</option>
+                    <option value="EMPLOYEE">EMPLOYEE</option>
+                </select>
+                <div style={modalStyles.buttons}>
+                    <button
+                        style={modalStyles.buttonConfirm}
+                        onMouseEnter={(e) => e.target.style.background = modalStyles.buttonConfirmHover.background}
+                        onMouseLeave={(e) => e.target.style.background = modalStyles.buttonConfirm.background}
+                        onClick={handleAddUser}
+                    >
+                        Thêm
+                    </button>
+                    <button
+                        style={modalStyles.buttonCancel}
+                        onMouseEnter={(e) => e.target.style.background = modalStyles.buttonCancelHover.background}
+                        onMouseLeave={(e) => e.target.style.background = modalStyles.buttonCancel.background}
+                        onClick={() => setIsAddModalOpen(false)}
+                    >
+                        Hủy
+                    </button>
+                </div>
+            </Modal>
 
+            {/* Modal Chỉnh Sửa User */}
+            <Modal
+                isOpen={isEditModalOpen}
+                onRequestClose={() => setIsEditModalOpen(false)}
+                style={{ overlay: modalStyles.overlay, content: modalStyles.content }}
+                contentLabel="Chỉnh sửa khách hàng"
+            >
+                <h3 style={modalStyles.title}>Chỉnh sửa khách hàng</h3>
+                {editUser && (
+                    <>
+                        <input
+                            type="text"
+                            placeholder="Tên đăng nhập"
+                            value={editUser.username}
+                            onChange={(e) => setEditUser({ ...editUser, username: e.target.value })}
+                            style={modalStyles.input}
+                        />
+                        <input
+                            type="email"
+                            placeholder="Email"
+                            value={editUser.email}
+                            onChange={(e) => setEditUser({ ...editUser, email: e.target.value })}
+                            style={modalStyles.input}
+                        />
+                        <input
+                            type="password"
+                            placeholder="Mật khẩu mới (để trống nếu không đổi)"
+                            value={editUser.password}
+                            onChange={(e) => setEditUser({ ...editUser, password: e.target.value })}
+                            style={modalStyles.input}
+                        />
+                        <select
+                            value={editUser.role}
+                            onChange={(e) => setEditUser({ ...editUser, role: e.target.value })}
+                            style={modalStyles.select}
+                        >
+                            <option value="USER">USER</option>
+                            <option value="ADMIN">ADMIN</option>
+                            <option value="EMPLOYEE">EMPLOYEE</option>
+                        </select>
+                        <div style={modalStyles.buttons}>
+                            <button
+                                style={modalStyles.buttonConfirm}
+                                onMouseEnter={(e) => e.target.style.background = modalStyles.buttonConfirmHover.background}
+                                onMouseLeave={(e) => e.target.style.background = modalStyles.buttonConfirm.background}
+                                onClick={handleEditUser}
+                            >
+                                Cập nhật
+                            </button>
+                            <button
+                                style={modalStyles.buttonCancel}
+                                onMouseEnter={(e) => e.target.style.background = modalStyles.buttonCancelHover.background}
+                                onMouseLeave={(e) => e.target.style.background = modalStyles.buttonCancel.background}
+                                onClick={() => setIsEditModalOpen(false)}
+                            >
+                                Hủy
+                            </button>
+                        </div>
+                    </>
+                )}
+            </Modal>
         </div>
     );
 };
 
 export default AdminCustomers;
 
-
 const modalStyles = {
     overlay: {
-        backgroundColor: "rgba(0, 0, 0, 0.5)", // Làm mờ nền khi mở modal
+        backgroundColor: "rgba(0, 0, 0, 0.5)",
         position: "fixed",
         top: 0,
         left: 0,

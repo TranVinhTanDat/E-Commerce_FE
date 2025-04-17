@@ -51,7 +51,7 @@ const NavbarAdmin = () => {
                     to="/admin/chat"
                     className={`navbar-item ${location.pathname === "/admin/chat" ? "active" : ""}`}
                 >
-                    👥 Chat
+                    💬 Chat
                 </Link>
 
                 <Link
