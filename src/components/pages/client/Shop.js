@@ -199,7 +199,7 @@ const Shop = () => {
                                                 <output id="amount" name="amount" htmlFor="rangeInput">{rangeValue}</output>
                                             </div>
                                         </div>
-                                        <div className="col-lg-12">
+                                        {/* <div className="col-lg-12">
                                             <div className="mb-3">
                                                 <h4>Additional</h4>
                                                 <div className="mb-2">
@@ -223,7 +223,7 @@ const Shop = () => {
                                                     <label htmlFor="Categories-5"> Expired</label>
                                                 </div>
                                             </div>
-                                        </div>
+                                        </div> */}
                                         <div className="col-lg-12">
                                             <div className="position-relative">
                                                 <img src="img/banner-fruits.jpg" className="img-fluid w-100 rounded" alt="" />

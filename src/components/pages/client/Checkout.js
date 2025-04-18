@@ -14,22 +14,30 @@ function Checkout() {
         phone: '',
         email: ''  // Thêm trường email vào state
     });
-    
+
     const [cartItems, setCartItems] = useState([]);
     const [quantities, setQuantities] = useState({});
     const [subtotal, setSubtotal] = useState(0);
-    const shipping = 3.00; 
+    const shipping = 3.00;
     const [total, setTotal] = useState(0);
     const [paymentMethod, setPaymentMethod] = useState('');
+    const [errors, setErrors] = useState({});
+
     const navigate = useNavigate();
 
     useEffect(() => {
         const token = localStorage.getItem('token');
-        if (!token) return;
+        if (!token) {
+            alert('Vui lòng đăng nhập để thanh toán');
+            return;
+        }
 
         const fetchData = async () => {
             try {
-                const [addressRes, cartRes] = await Promise.all([
+                const [userRes, addressRes, cartRes] = await Promise.all([
+                    axios.get(`${API_BASE_URL}/auth/user`, {
+                        headers: { Authorization: `Bearer ${token}` }
+                    }),
                     axios.get(`${API_BASE_URL}/addresses/view`, {
                         headers: { Authorization: `Bearer ${token}` }
                     }),
@@ -38,7 +46,13 @@ function Checkout() {
                     })
                 ]);
 
-                if (addressRes.data.length > 0) setAddress(addressRes.data[0]);
+                // Nếu có địa chỉ, lấy địa chỉ đầu tiên
+                if (addressRes.data.length > 0) {
+                    setAddress(addressRes.data[0]);
+                } else {
+                    // Nếu không có địa chỉ, gán email từ user
+                    setAddress(prev => ({ ...prev, email: userRes.data.email || '' }));
+                }
 
                 const cartData = cartRes.data;
                 setCartItems(cartData);
@@ -55,6 +69,7 @@ function Checkout() {
                 setTotal(initialSubtotal + shipping);
             } catch (error) {
                 console.error('Error fetching data:', error);
+                alert('Không thể tải dữ liệu. Vui lòng thử lại.');
             }
         };
 
@@ -63,82 +78,110 @@ function Checkout() {
 
     const handleChange = (e) => {
         setAddress((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+        if (errors[e.target.name]) {
+            setErrors({ ...errors, [e.target.name]: '' });
+        }
     };
-    
+
+    const validateForm = () => {
+        const newErrors = {};
+        if (!address.addressLine1.trim()) {
+            newErrors.addressLine1 = 'Address Line 1 không được để trống';
+        }
+        if (!address.city.trim()) {
+            newErrors.city = 'City không được để trống';
+        }
+        if (!address.state.trim()) {
+            newErrors.state = 'State không được để trống';
+        }
+        if (!address.postalCode.trim()) {
+            newErrors.postalCode = 'Postal Code không được để trống';
+        }
+        if (!address.country.trim()) {
+            newErrors.country = 'Country không được để trống';
+        }
+        if (!address.phone.trim()) {
+            newErrors.phone = 'Phone không được để trống';
+        }
+        if (!address.email.trim()) {
+            newErrors.email = 'Email không được để trống';
+        } else if (!/\S+@\S+\.\S+/.test(address.email)) {
+            newErrors.email = 'Email không hợp lệ';
+        }
+        setErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
+    };
+
 
     const handlePaymentMethodChange = (e) => {
         setPaymentMethod(e.target.value);
     };
 
     const handlePlaceOrder = async () => {
+        if (!validateForm()) {
+            alert('Vui lòng điền đầy đủ các trường bắt buộc trước khi thanh toán.');
+            return;
+        }
 
-        if (!address.addressLine1 || !address.city || !address.state || !address.postalCode || !address.country || !address.phone || !address.email) {
-            alert('Please fill in all required fields before proceeding with the checkout.');
-            return;
-        }
         const token = localStorage.getItem('token');
-    
+
         if (!paymentMethod) {
-            alert('Please select a payment method');
+            alert('Vui lòng chọn phương thức thanh toán');
             return;
         }
-    
+
         try {
-            // Gửi yêu cầu tạo đơn hàng
             const orderResponse = await axios.post(`${API_BASE_URL}/orders/place`, {}, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
-    
+
             const orderId = orderResponse.data.id;
-    
+
             if (paymentMethod === 'momo') {
-                // Nếu là MoMo, gửi yêu cầu thanh toán và lấy URL
                 const paymentResponse = await axios.post(`${API_BASE_URL}/payments/process`, {
                     orderId: orderId,
-                    amount: orderResponse.data.total // Đảm bảo gửi đúng amount
+                    amount: orderResponse.data.total
                 }, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
-    
-                // Kiểm tra xem paymentResponse.data có phải là một đối tượng không và có thuộc tính payUrl
+
                 if (paymentResponse.data && typeof paymentResponse.data === 'object' && paymentResponse.data.payUrl) {
-                    // Nếu có payUrl, điều hướng đến trang thanh toán
                     window.location.href = paymentResponse.data.payUrl;
                 } else {
                     console.error('Invalid payment URL received');
-                    alert('Error processing payment. Please try again.');
+                    alert('Lỗi xử lý thanh toán. Vui lòng thử lại.');
                 }
             } else if (paymentMethod === 'cod') {
                 alert('Order placed successfully!');
                 navigate('/ThankYou');
             } else {
-                alert('Please select a valid payment method!');
+                alert('Vui lòng chọn phương thức thanh toán hợp lệ!');
             }
         } catch (error) {
             console.error('Error placing order:', error.response?.data || error.message);
-            alert('Failed to place order. Please try again.');
+            alert('Không thể đặt hàng. Vui lòng thử lại.');
         }
     };
 
     const handleSave = async () => {
-        if (!address.addressLine1 || !address.city || !address.state || !address.postalCode || !address.country || !address.phone || !address.email) {
-            alert('Please fill in all required fields.');
+        if (!validateForm()) {
+            alert('Vui lòng điền đầy đủ các trường bắt buộc.');
             return;
         }
-    
+
         const token = localStorage.getItem('token');
-        
+
         try {
-            // Gửi yêu cầu tạo địa chỉ mới
             await axios.post(`${API_BASE_URL}/addresses/create`, address, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             alert('Address saved successfully!');
         } catch (error) {
             console.error('Error saving address:', error);
+            alert('Không thể lưu địa chỉ. Vui lòng thử lại.');
         }
     };
-    
+
     return (
         <div>
             {/* Single Page Header start */}
@@ -163,50 +206,104 @@ function Checkout() {
                                     <div className="col-md-12 col-lg-6">
                                         <div className="form-item w-100">
                                             <label className="form-label my-3">Address Line 1<sup>*</sup></label>
-                                            <input type="text" className="form-control" name="addressLine1" value={address.addressLine1} onChange={handleChange} />
+                                            <input
+                                                type="text"
+                                                className={`form-control ${errors.addressLine1 ? 'is-invalid' : ''}`}
+                                                name="addressLine1"
+                                                value={address.addressLine1}
+                                                onChange={handleChange}
+                                            />
+                                            {errors.addressLine1 && <div className="invalid-feedback">{errors.addressLine1}</div>}
                                         </div>
                                     </div>
                                     <div className="col-md-12 col-lg-6">
                                         <div className="form-item w-100">
                                             <label className="form-label my-3">Address Line 2</label>
-                                            <input type="text" className="form-control" name="addressLine2" value={address.addressLine2} onChange={handleChange} />
+                                            <input
+                                                type="text"
+                                                className="form-control"
+                                                name="addressLine2"
+                                                value={address.addressLine2}
+                                                onChange={handleChange}
+                                            />
                                         </div>
                                     </div>
                                 </div>
                                 <div className="form-item">
                                     <label className="form-label my-3">City<sup>*</sup></label>
-                                    <input type="text" className="form-control" name="city" value={address.city} onChange={handleChange} />
+                                    <input
+                                        type="text"
+                                        className={`form-control ${errors.city ? 'is-invalid' : ''}`}
+                                        name="city"
+                                        value={address.city}
+                                        onChange={handleChange}
+                                    />
+                                    {errors.city && <div className="invalid-feedback">{errors.city}</div>}
                                 </div>
                                 <div className="form-item">
                                     <label className="form-label my-3">State <sup>*</sup></label>
-                                    <input type="text" className="form-control" name="state" value={address.state} onChange={handleChange} />
+                                    <input
+                                        type="text"
+                                        className={`form-control ${errors.state ? 'is-invalid' : ''}`}
+                                        name="state"
+                                        value={address.state}
+                                        onChange={handleChange}
+                                    />
+                                    {errors.state && <div className="invalid-feedback">{errors.state}</div>}
                                 </div>
                                 <div className="form-item">
                                     <label className="form-label my-3">Postal Code<sup>*</sup></label>
-                                    <input type="text" className="form-control" name="postalCode" value={address.postalCode} onChange={handleChange} />
+                                    <input
+                                        type="text"
+                                        className={`form-control ${errors.postalCode ? 'is-invalid' : ''}`}
+                                        name="postalCode"
+                                        value={address.postalCode}
+                                        onChange={handleChange}
+                                    />
+                                    {errors.postalCode && <div className="invalid-feedback">{errors.postalCode}</div>}
                                 </div>
                                 <div className="form-item">
                                     <label className="form-label my-3">Country<sup>*</sup></label>
-                                    <input type="text" className="form-control" name="country" value={address.country} onChange={handleChange} />
-                                </div>
-                                <div className="form-item">
-                                    <label className="form-label my-3">Postcode/Zip<sup>*</sup></label>
-                                    <input type="text" className="form-control" name="country" value={address.country} onChange={handleChange} />
+                                    <input
+                                        type="text"
+                                        className={`form-control ${errors.country ? 'is-invalid' : ''}`}
+                                        name="country"
+                                        value={address.country}
+                                        onChange={handleChange}
+                                    />
+                                    {errors.country && <div className="invalid-feedback">{errors.country}</div>}
                                 </div>
                                 <div className="form-item">
                                     <label className="form-label my-3">Mobile<sup>*</sup></label>
-                                    <input type="tel" className="form-control" name="phone" value={address.phone} onChange={handleChange} />
+                                    <input
+                                        type="tel"
+                                        className={`form-control ${errors.phone ? 'is-invalid' : ''}`}
+                                        name="phone"
+                                        value={address.phone}
+                                        onChange={handleChange}
+                                    />
+                                    {errors.phone && <div className="invalid-feedback">{errors.phone}</div>}
                                 </div>
-
-                                                                <div className="form-item">
+                                <div className="form-item">
                                     <label className="form-label my-3">Email Address<sup>*</sup></label>
-                                    <input type="email" className="form-control" name="email" value={address.email} onChange={handleChange} />
+                                    <input
+                                        type="email"
+                                        className={`form-control ${errors.email ? 'is-invalid' : ''}`}
+                                        name="email"
+                                        value={address.email}
+                                        onChange={handleChange}
+                                    />
+                                    {errors.email && <div className="invalid-feedback">{errors.email}</div>}
                                 </div>
-
                                 <div className="row g-4 text-center align-items-center justify-content-center pt-4">
-                                    <button type="button" className="btn btn-secondary py-3 px-4 text-uppercase w-100 text-primary" onClick={handleSave}>Save</button>
+                                    <button
+                                        type="button"
+                                        className="btn btn-secondary py-3 px-4 text-uppercase w-100 text-primary"
+                                        onClick={handleSave}
+                                    >
+                                        Save
+                                    </button>
                                 </div>
-
                             </div>
                             <div className="col-md-12 col-lg-6 col-xl-5">
                                 <div className="table-responsive">
@@ -286,7 +383,7 @@ function Checkout() {
                                         </tbody>
                                     </table>
                                 </div>
-              
+
                                 <div className="row g-4 text-center align-items-center justify-content-center border-bottom py-3">
                                     <div className="col-12">
                                         <div className="form-check text-start my-3">

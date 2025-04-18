@@ -28,6 +28,7 @@ import ForgotPassword from './components/pages/client/ForgotPassword';
 import VerifyOtp from './components/pages/client/VerifyOtp';
 import ResetPassword from './components/pages/client/ResetPassword';
 // import ChatClient from './components/pages/client/ChatClient';
+import Profile from './components/pages/client/Profile'
 
 // Admin
 import AdminOrderList from './components/pages/admin/AdminOrderList'; 
@@ -89,6 +90,7 @@ function App() {
                         <Route path="/forgot-password" element={<ForgotPassword />} />
                         <Route path="/verify-otp" element={<VerifyOtp />} />
                         <Route path="/reset-password" element={<ResetPassword />} />
+                        <Route path="/profile" element={<Profile />} />
                         {/* <Route path="/chat" element={<ChatClient username="customer" />} /> */}
 
                     </Routes>

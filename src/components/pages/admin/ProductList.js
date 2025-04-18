@@ -8,7 +8,8 @@ const ProductList = () => {
     const [products, setProducts] = useState([]);
     const [categories, setCategories] = useState([]);
     const [open, setOpen] = useState(false);
-    const [searchKeyword, setSearchKeyword] = useState(''); // Thêm state cho từ khóa tìm kiếm
+    const [openCategoryDialog, setOpenCategoryDialog] = useState(false);
+    const [searchKeyword, setSearchKeyword] = useState('');
     const [newProduct, setNewProduct] = useState({
         name: '',
         description: '',
@@ -17,13 +18,17 @@ const ProductList = () => {
         image: '',
         category: ''
     });
+    const [newCategory, setNewCategory] = useState({
+        name: '',
+        parent: null
+    });
     const [editingProduct, setEditingProduct] = useState(null);
     const [page, setPage] = useState(0);
     const [totalPages, setTotalPages] = useState(0);
-    const [alertOpen, setAlertOpen] = useState(false); 
-    const [alertMessage, setAlertMessage] = useState(''); 
-    const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false); 
-    const [productToDelete, setProductToDelete] = useState(null); 
+    const [alertOpen, setAlertOpen] = useState(false);
+    const [alertMessage, setAlertMessage] = useState('');
+    const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+    const [productToDelete, setProductToDelete] = useState(null);
     const [isAdmin, setIsAdmin] = useState(false);
 
     useEffect(() => {
@@ -32,15 +37,13 @@ const ProductList = () => {
         checkAdminRole();
     }, [page]);
 
-    
     useEffect(() => {
         if (searchKeyword === '') {
-            fetchProducts(page);  // Nếu từ khóa rỗng, hiển thị tất cả sản phẩm
+            fetchProducts(page);
         } else {
-            handleSearch();  // Nếu có từ khóa, tìm kiếm sản phẩm
+            handleSearch();
         }
-    }, [searchKeyword]);  // Lắng nghe sự thay đổi của từ khóa tìm kiếm
-    
+    }, [searchKeyword]);
 
     const checkAdminRole = () => {
         const role = localStorage.getItem('role');
@@ -79,21 +82,35 @@ const ProductList = () => {
                     Authorization: `Bearer ${localStorage.getItem('token')}`
                 }
             });
-            setProducts(response.data.data);  // Cập nhật danh sách sản phẩm theo kết quả tìm kiếm
+            setProducts(response.data.data);
         } catch (e) {
             console.log('Error searching products:', e);
             setAlertMessage(`Không tìm thấy sản phẩm nào với từ khóa "${searchKeyword}"`);
             setAlertOpen(true);
         }
     };
-    
 
     const handleClickOpen = (product = null) => {
         if (product) {
-            setNewProduct(product);
+            // Ánh xạ dữ liệu sản phẩm vào newProduct
+            setNewProduct({
+                name: product.name || '',
+                description: product.description || '',
+                price: product.price || '',
+                quantity: product.quantity || '',
+                image: product.image || '',
+                category: product.category || '' // Lưu object category đầy đủ
+            });
             setEditingProduct(product.id);
         } else {
-            setNewProduct({ name: '', description: '', price: '', quantity: '', image: '', category: '' });
+            setNewProduct({
+                name: '',
+                description: '',
+                price: '',
+                quantity: '',
+                image: '',
+                category: ''
+            });
             setEditingProduct(null);
         }
         setOpen(true);
@@ -103,9 +120,35 @@ const ProductList = () => {
         setOpen(false);
     };
 
+    const handleOpenCategoryDialog = () => {
+        setNewCategory({ name: '', parent: null });
+        setOpenCategoryDialog(true);
+    };
+
+    const handleCloseCategoryDialog = () => {
+        setOpenCategoryDialog(false);
+    };
+
     const handleInputChange = (e) => {
         const { name, value } = e.target;
         setNewProduct({ ...newProduct, [name]: value });
+    };
+
+    const handleCategoryInputChange = (e) => {
+        const { name, value } = e.target;
+        setNewCategory({ ...newCategory, [name]: value });
+    };
+
+    const handleCategoryParentChange = (e) => {
+        const parentId = e.target.value;
+        const parent = categories.find(cat => cat.id === parentId) || null;
+        setNewCategory({ ...newCategory, parent });
+    };
+
+    const handleCategoryChange = (e) => {
+        const categoryId = e.target.value;
+        const selectedCategory = categories.find(cat => cat.id === categoryId) || '';
+        setNewProduct({ ...newProduct, category: selectedCategory });
     };
 
     const handleSubmit = async () => {
@@ -116,18 +159,45 @@ const ProductList = () => {
                 }
             };
 
+            // Chuẩn bị dữ liệu gửi đi
+            const productData = {
+                ...newProduct,
+                category: newProduct.category ? { id: newProduct.category.id } : null
+            };
+
             if (editingProduct) {
-                await axios.put(`${API_BASE_URL}/admin/products/edit-product/${editingProduct}`, newProduct, config);
+                await axios.put(`${API_BASE_URL}/admin/products/edit-product/${editingProduct}`, productData, config);
                 setAlertMessage('Sửa sản phẩm thành công!');
             } else {
-                await axios.post(`${API_BASE_URL}/admin/products/add-product`, newProduct, config);
+                await axios.post(`${API_BASE_URL}/admin/products/add-product`, productData, config);
                 setAlertMessage('Thêm sản phẩm thành công!');
             }
-            setAlertOpen(true); 
+            setAlertOpen(true);
             fetchProducts(page);
             handleClose();
         } catch (e) {
             console.log('Error submitting product:', e);
+            setAlertMessage('Lỗi khi lưu sản phẩm');
+            setAlertOpen(true);
+        }
+    };
+
+    const handleSubmitCategory = async () => {
+        try {
+            const config = {
+                headers: {
+                    Authorization: `Bearer ${localStorage.getItem('token')}`
+                }
+            };
+            await axios.post(`${API_BASE_URL}/categories`, newCategory, config);
+            setAlertMessage('Thêm thể loại thành công!');
+            setAlertOpen(true);
+            fetchCategories();
+            handleCloseCategoryDialog();
+        } catch (e) {
+            console.log('Error submitting category:', e);
+            setAlertMessage('Lỗi khi thêm thể loại');
+            setAlertOpen(true);
         }
     };
 
@@ -147,9 +217,9 @@ const ProductList = () => {
                 }
             });
             fetchProducts(page);
-            setConfirmDeleteOpen(false); 
+            setConfirmDeleteOpen(false);
             setAlertMessage('Xóa sản phẩm thành công!');
-            setAlertOpen(true); 
+            setAlertOpen(true);
         } catch (e) {
             console.log('Error deleting product:', e);
         }
@@ -179,30 +249,35 @@ const ProductList = () => {
         <div className="product-list-container">
             <h1>Product List</h1>
 
-            {/* Nút thêm sản phẩm, chỉ Admin mới thấy */}
             {isAdmin && (
-                <div className="add-product-button-container">
-                    <Button
+                <div className="add-product-button-container" style={{ display: 'flex', gap: '10px' }}>
+                    <Button 
                         variant="contained"
                         color="primary"
                         onClick={() => handleClickOpen()}
-                        className="btn-add"
+                        className="btn-add" 
                     >
                         THÊM
+                    </Button>
+                    <Button
+                        variant="contained"
+                        color="secondary"
+                        onClick={handleOpenCategoryDialog}
+                        className="btn-add-category"
+                    >
+                        THÊM THỂ LOẠI
                     </Button>
                 </div>
             )}
 
-            {/* Ô tìm kiếm sản phẩm */}
             <TextField
                 label="Search Product"
                 variant="outlined"
                 value={searchKeyword}
-                onChange={(e) => setSearchKeyword(e.target.value)}  // Cập nhật từ khóa tìm kiếm
+                onChange={(e) => setSearchKeyword(e.target.value)}
                 fullWidth
                 style={{ marginBottom: '20px' }}
             />
-
 
             <Dialog open={open} onClose={handleClose}>
                 <DialogTitle>{editingProduct ? 'Sửa sản phẩm' : 'Thêm sản phẩm'}</DialogTitle>
@@ -254,11 +329,12 @@ const ProductList = () => {
                         <InputLabel>Danh mục</InputLabel>
                         <Select
                             name="category"
-                            value={newProduct.category}
-                            onChange={handleInputChange}
+                            value={newProduct.category ? newProduct.category.id : ''}
+                            onChange={handleCategoryChange}
                         >
+                            <MenuItem value="">Chọn danh mục</MenuItem>
                             {categories.map((category) => (
-                                <MenuItem key={category.id} value={category}>
+                                <MenuItem key={category.id} value={category.id}>
                                     {category.name}
                                 </MenuItem>
                             ))}
@@ -273,7 +349,42 @@ const ProductList = () => {
                 </DialogActions>
             </Dialog>
 
-            {/* Hiển thị danh sách sản phẩm */}
+            <Dialog open={openCategoryDialog} onClose={handleCloseCategoryDialog}>
+                <DialogTitle>Thêm thể loại</DialogTitle>
+                <DialogContent>
+                    <TextField
+                        autoFocus
+                        margin="dense"
+                        label="Tên thể loại"
+                        name="name"
+                        value={newCategory.name}
+                        onChange={handleCategoryInputChange}
+                        fullWidth
+                    />
+                    <FormControl fullWidth margin="normal">
+                        <InputLabel>Thể loại cha</InputLabel>
+                        <Select
+                            name="parent"
+                            value={newCategory.parent ? newCategory.parent.id : ''}
+                            onChange={handleCategoryParentChange}
+                        >
+                            <MenuItem value="">Không có</MenuItem>
+                            {categories.map((category) => (
+                                <MenuItem key={category.id} value={category.id}>
+                                    {category.name}
+                                </MenuItem>
+                            ))}
+                        </Select>
+                    </FormControl>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={handleCloseCategoryDialog} color="secondary">Hủy</Button>
+                    <Button onClick={handleSubmitCategory} style={{ padding: '5 10px' }} color="primary">
+                        Thêm
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
             <Table>
                 <TableHead>
                     <TableRow>

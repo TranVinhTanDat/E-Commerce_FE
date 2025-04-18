@@ -62,10 +62,10 @@ export default function Footer() {
                         <div className="col-lg-3 col-md-6">
                             <div className="footer-item">
                                 <h4 className="text-light mb-3">Contact</h4>
-                                <p style={{color:'white'}}>Address: 1429 Netus Rd, NY 48247</p>
-                                <p style={{color:'white'}}>Email: Example@gmail.com</p>
-                                <p style={{color:'white'}}>Phone: +0123 4567 8910</p>
-                                <p style={{color:'white'}}>Payment Accepted</p>
+                                <p style={{color:'white'}}>Address: Ly Thuong Kiet, Huyen Hoc Mon</p>
+                                <p style={{color:'white'}}>Email: tandat27012002.td@gmail.com</p>
+                                <p style={{color:'white'}}>Phone: +84 0858055607</p>
+                                <p style={{color:'white'}}>Payment Momo</p>
                                 <img src="img/payment.png" className="img-fluid" alt="" />
                             </div>
                         </div>

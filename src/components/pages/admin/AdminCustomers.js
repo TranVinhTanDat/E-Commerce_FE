@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import axiosInstance from "./axiosInstance";
 import Modal from "react-modal";
 
-const API_BASE_URL = "https://e-commerceapi-uk5z.onrender.com/admin/users";
+const API_BASE_URL = "http://localhost:8080/admin/users";
 
 Modal.setAppElement("#root");
 

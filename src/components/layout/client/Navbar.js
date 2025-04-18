@@ -11,20 +11,47 @@ export default function Navbar() {
     const [showModal, setShowModal] = useState(false);
     const [user, setUser] = useState(null);
     const [cartItemsCount, setCartItemsCount] = useState(0);
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const [isPagesOpen, setIsPagesOpen] = useState(false);
     const modalRef = useRef(null);
-
+    const collapseRef = useRef(null);
     const [showChatList, setShowChatList] = useState(false);
     const [showChatBox, setShowChatBox] = useState(false);
     const [customers, setCustomers] = useState([]);
     const [selectedCustomer, setSelectedCustomer] = useState(null);
     const [messages, setMessages] = useState([]);
     const [message, setMessage] = useState("");
-    const [unreadMessagesFromAdmin, setUnreadMessagesFromAdmin] = useState(0); // Số tin nhắn chưa đọc từ Admin
+    const [unreadMessagesFromAdmin, setUnreadMessagesFromAdmin] = useState(0);
     const chatRef = useRef(null);
     const clientRef = useRef(null);
     const chatListRef = useRef(null);
 
-    // Lấy số tin nhắn chưa đọc từ Admin gửi đến user hiện tại
+    // Toggle menu collapse
+    const toggleMenu = () => {
+        setIsMenuOpen(prev => {
+            const newState = !prev;
+            if (collapseRef.current) {
+                collapseRef.current.classList.toggle('show', newState);
+            }
+            return newState;
+        });
+        setIsPagesOpen(false); // Đóng dropdown Pages khi toggle menu
+    };
+
+    // Toggle dropdown Pages trên mobile
+    const togglePages = () => {
+        setIsPagesOpen(prev => !prev);
+    };
+
+    // Đóng menu khi chọn mục
+    const closeMenu = () => {
+        setIsMenuOpen(false);
+        setIsPagesOpen(false);
+        if (collapseRef.current) {
+            collapseRef.current.classList.remove('show');
+        }
+    };
+
     const fetchUnreadMessagesFromAdmin = async () => {
         if (!user?.username) return;
         try {
@@ -45,26 +72,27 @@ export default function Navbar() {
             axios.get(`${API_BASE_URL}/auth/user`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             })
-            .then(response => {
-                setUser(response.data);
-            })
-            .catch(error => console.error('Error fetching user data:', error));
+                .then(response => {
+                    setUser(response.data);
+                })
+                .catch(error => console.error('Error fetching user data:', error));
 
             axios.get(`${API_BASE_URL}/cart/view`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             })
-            .then(response => setCartItemsCount(response.data.length))
-            .catch(error => console.error('Error fetching cart items:', error));
+                .then(response => setCartItemsCount(response.data.length))
+                .catch(error => console.error('Error fetching cart items:', error));
         }
 
         function handleClickOutside(event) {
+            console.log("Clicked element:", event.target);
             if (modalRef.current && !modalRef.current.contains(event.target)) {
-                setShowModal(false);
+              setShowModal(false);
             }
             if (chatListRef.current && !chatListRef.current.contains(event.target)) {
-                setShowChatList(false);
+              setShowChatList(false);
             }
-        }
+          }
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
@@ -72,7 +100,6 @@ export default function Navbar() {
     useEffect(() => {
         if (!user?.username) return;
 
-        // Lấy số tin nhắn chưa đọc ban đầu từ Admin
         fetchUnreadMessagesFromAdmin();
 
         const token = localStorage.getItem("token");
@@ -91,18 +118,14 @@ export default function Navbar() {
             debug: (msg) => console.log("STOMP DEBUG:", msg),
             onConnect: () => {
                 console.log("✅ STOMP Client connected!");
-
                 clientRef.current.subscribe("/user/queue/private", (msg) => {
                     const newMessage = JSON.parse(msg.body);
                     console.log("📩 Tin nhắn riêng tư mới:", newMessage);
                     setMessages((prev) => [...prev, newMessage]);
-
-                    // Cập nhật số tin nhắn chưa đọc khi nhận tin nhắn mới từ Admin
                     if (newMessage.sender === "admin" && !showChatBox) {
                         fetchUnreadMessagesFromAdmin();
                     }
                 });
-
                 clientRef.current.subscribe("/topic/messages", (msg) => {
                     const newMessage = JSON.parse(msg.body);
                     console.log("📩 Tin nhắn từ topic:", newMessage);
@@ -137,11 +160,17 @@ export default function Navbar() {
             const response = await axios.get(`${API_BASE_URL}/messages/conversations/${user.username}`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
-            setCustomers(response.data);
-            // Sau khi lấy danh sách khách hàng, cập nhật số tin nhắn chưa đọc
+            let conversationList = response.data;
+            if (user.username !== "admin" && !conversationList.includes("admin")) {
+                conversationList = [...conversationList, "admin"];
+            }
+            setCustomers(conversationList);
             fetchUnreadMessagesFromAdmin();
         } catch (error) {
             console.error("🔥 Lỗi khi lấy danh sách cuộc hội thoại:", error);
+            if (user.username !== "admin") {
+                setCustomers(["admin"]);
+            }
         }
     };
 
@@ -170,21 +199,18 @@ export default function Navbar() {
         try {
             await fetchMessages(customer);
 
-            // Đợi giao diện render xong, sau đó cuộn xuống dưới cùng
             setTimeout(() => {
                 if (chatRef.current) {
                     chatRef.current.scrollTop = chatRef.current.scrollHeight;
                 }
-            }, 100); // Đợi 100ms để đảm bảo giao diện đã render
+            }, 100);
 
-            // Nếu mở hộp chat với Admin, đánh dấu tất cả tin nhắn từ Admin là đã đọc
             if (customer === "admin") {
                 const token = localStorage.getItem("token");
                 await axios.post(`${API_BASE_URL}/messages/mark-read-from-admin/${user.username}`, null, {
                     headers: { Authorization: `Bearer ${token}` },
                 });
 
-                // Cập nhật số tin nhắn chưa đọc từ Admin
                 setTimeout(() => {
                     fetchUnreadMessagesFromAdmin();
                 }, 500);
@@ -208,6 +234,8 @@ export default function Navbar() {
             chatRef.current.scrollTop = chatRef.current.scrollHeight;
         }
     }, [messages]);
+
+    const isMobile = window.innerWidth < 992;
 
     return (
         <div className="container-fluid fixed-top">
@@ -238,98 +266,199 @@ export default function Navbar() {
                     <button
                         className="navbar-toggler py-2 px-3"
                         type="button"
-                        data-bs-toggle="collapse"
-                        data-bs-target="#navbarCollapse"
                         aria-controls="navbarCollapse"
-                        aria-expanded="false"
+                        aria-expanded={isMenuOpen}
                         aria-label="Toggle navigation"
+                        onClick={toggleMenu}
                     >
-                        <span className="fa fa-bars text-primary"></span>
+                        <span className="fa fa-bars"></span>
                     </button>
-                    <div className="collapse navbar-collapse bg-white" id="navbarCollapse">
+                    <div className="collapse navbar-collapse bg-white" id="navbarCollapse" ref={collapseRef}>
                         <div className="navbar-nav mx-auto">
-                            <NavLink to="/" className={`nav-item nav-link ${location.pathname === '/' ? 'active' : ''}`}>Home</NavLink>
-                            <NavLink to="/shop" className={`nav-item nav-link ${location.pathname === '/shop' ? 'active' : ''}`}>Shop</NavLink>
+                            <NavLink
+                                to="/"
+                                className={`nav-item nav-link ${location.pathname === '/' ? 'active' : ''}`}
+                                onClick={closeMenu}
+                            >
+                                Home
+                            </NavLink>
+                            <NavLink
+                                to="/shop"
+                                className={`nav-item nav-link ${location.pathname === '/shop' ? 'active' : ''}`}
+                                onClick={closeMenu}
+                            >
+                                Shop
+                            </NavLink>
                             <div className="nav-item dropdown">
-                                <button className="nav-link dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" style={{ background: 'none', border: 'none' }}>
+                                <button
+                                    className="nav-link dropdown-toggle"
+                                    onClick={isMobile ? togglePages : undefined}
+                                    data-bs-toggle={isMobile ? undefined : "dropdown"}
+                                    aria-expanded={isMobile ? isPagesOpen : undefined}
+                                    style={{ background: 'none', border: 'none' }}
+                                >
                                     Pages
                                 </button>
-                                <div className="dropdown-menu m-0 bg-secondary rounded-0">
-                                    <NavLink to="/cart" className="dropdown-item">Cart</NavLink>
-                                    <NavLink to="/checkout" className="dropdown-item">Checkout</NavLink>
-                                    <NavLink to="/orderhistory" className="dropdown-item">Order History</NavLink>
-                                    <NavLink to="/testimonial" className="dropdown-item">Testimonial</NavLink>
+                                <div
+                                    className={isMobile ? "mobile-dropdown" : "dropdown-menu m-0 bg-secondary rounded-0"}
+                                    style={isMobile ? { display: isPagesOpen ? 'block' : 'none' } : {}}
+                                >
+                                    <NavLink
+                                        to="/cart"
+                                        className={isMobile ? "mobile-dropdown-item" : "dropdown-item"}
+                                        onClick={closeMenu}
+                                    >
+                                        Cart
+                                    </NavLink>
+                                    <NavLink
+                                        to="/checkout"
+                                        className={isMobile ? "mobile-dropdown-item" : "dropdown-item"}
+                                        onClick={closeMenu}
+                                    >
+                                        Checkout
+                                    </NavLink>
+                                    <NavLink
+                                        to="/orderhistory"
+                                        className={isMobile ? "mobile-dropdown-item" : "dropdown-item"}
+                                        onClick={closeMenu}
+                                    >
+                                        Order History
+                                    </NavLink>
+                                    <NavLink
+                                        to="/testimonial"
+                                        className={isMobile ? "mobile-dropdown-item" : "dropdown-item"}
+                                        onClick={closeMenu}
+                                    >
+                                        Testimonial
+                                    </NavLink>
                                 </div>
                             </div>
-                            <NavLink to="/contact" className={`nav-item nav-link ${location.pathname === '/contact' ? 'active' : ''}`}>Contact</NavLink>
+                            <NavLink
+                                to="/contact"
+                                className={`nav-item nav-link ${location.pathname === '/contact' ? 'active' : ''}`}
+                                onClick={closeMenu}
+                            >
+                                Contact
+                            </NavLink>
                         </div>
                         <div className="d-flex m-3 me-0 position-relative">
                             <NavLink to="/cart" className="position-relative me-4 my-auto">
                                 <i className="fa fa-shopping-bag fa-2x"></i>
-                                <span className="position-absolute bg-secondary rounded-circle d-flex align-items-center justify-content-center text-dark px-1"
-                                    style={{ top: '-5px', left: '15px', height: '20px', minWidth: '20px' }}>
+                                <span
+                                    className="position-absolute bg-secondary rounded-circle d-flex align-items-center justify-content-center text-dark px-1"
+                                    style={{ top: '-5px', left: '15px', height: '20px', minWidth: '20px' }}
+                                >
                                     {cartItemsCount}
                                 </span>
                             </NavLink>
-
-                            <NavLink to="#" className="position-relative me-4 my-auto" onClick={(e) => {
-                                e.preventDefault();
-                                setShowChatList(!showChatList);
-                                if (!showChatList) fetchUserConversations();
-                            }}>
+                            <NavLink
+                                to="#"
+                                className="position-relative me-4 my-auto"
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    setShowChatList((prev) => {
+                                        const newState = !prev;
+                                        if (newState) fetchUserConversations();
+                                        return newState;
+                                    });
+                                }}
+                                onTouchStart={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    setShowChatList((prev) => {
+                                        const newState = !prev;
+                                        if (newState) fetchUserConversations();
+                                        return newState;
+                                    });
+                                }}
+                            >
                                 <i className="fas fa-comment-dots fa-2x"></i>
                             </NavLink>
 
-                            <a href="#" className="my-auto" onClick={(e) => { e.preventDefault(); setShowModal(!showModal); }}>
+                            <a
+                                href="#"
+                                className="my-auto"
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    setShowModal((prev) => !prev);
+                                }}
+                                onTouchStart={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    setShowModal((prev) => !prev);
+                                }}
+                            >
                                 <i className="fas fa-user fa-2x"></i>
                             </a>
                             {showModal && (
-                                <div ref={modalRef} style={styles.modalDropdown}>
-                                    <div style={styles.modalContent}>
-                                        <span style={styles.closeIcon} onClick={() => setShowModal(false)}>×</span>
+                                <div className="modal-dropdown" ref={modalRef}>
+                                    <div className="modal-content">
+                                        <span className="close-icon" onClick={() => setShowModal(false)}>×</span>
                                         {user ? (
                                             <>
-                                                <img src={user.avatar} alt="Avatar" style={styles.avatar} />
-                                                <p style={styles.username}>{user.username}</p>
-                                                <button 
-                                                    onClick={() => { navigate('/address'); setShowModal(false); }} 
-                                                    style={styles.menuItem}
+                                                <img src={user.avatar} alt="Avatar" className="avatar" />
+                                                <p className="username">{user.username}</p>
+                                                <button
+                                                    onClick={() => {
+                                                        navigate('/profile');
+                                                        setShowModal(false);
+                                                    }}
+                                                    className="menu-item"
                                                 >
-                                                    ℹ️ <span>Info</span>
+                                                    <i className="fas fa-user me-2"></i> Profile
                                                 </button>
-                                                <button 
-                                                    onClick={() => { navigate('/change-password'); setShowModal(false); }} 
-                                                    style={styles.menuItem}
+                                                <button
+                                                    onClick={() => {
+                                                        navigate('/address');
+                                                        setShowModal(false);
+                                                    }}
+                                                    className="menu-item"
                                                 >
-                                                    🔄 <span>Change Password</span>
+                                                    <i className="fas fa-map-marker-alt me-2"></i> Address
                                                 </button>
-                                                <button 
-                                                    onClick={handleLogout} 
-                                                    style={{ ...styles.menuItem, ...styles.logout }}
+                                                <button
+                                                    onClick={() => {
+                                                        navigate('/change-password');
+                                                        setShowModal(false);
+                                                    }}
+                                                    className="menu-item"
                                                 >
-                                                    🚪 Logout
+                                                    <i className="fas fa-key me-2"></i> Change Password
+                                                </button>
+                                                <button
+                                                    onClick={handleLogout}
+                                                    className="menu-item logout"
+                                                >
+                                                    <i className="fas fa-sign-out-alt me-2"></i> Logout
                                                 </button>
                                             </>
                                         ) : (
                                             <>
-                                                <button 
-                                                    onClick={() => { navigate('/login'); setShowModal(false); }} 
-                                                    style={styles.menuItem}
+                                                <button
+                                                    onClick={() => {
+                                                        navigate('/login');
+                                                        setShowModal(false);
+                                                    }}
+                                                    className="menu-item"
                                                 >
-                                                    🔑 <span>Login</span>
+                                                    <i className="fas fa-key me-2"></i> Login
                                                 </button>
-                                                <button 
-                                                    onClick={() => { navigate('/register'); setShowModal(false); }} 
-                                                    style={styles.menuItem}
+                                                <button
+                                                    onClick={() => {
+                                                        navigate('/register');
+                                                        setShowModal(false);
+                                                    }}
+                                                    className="menu-item"
                                                 >
-                                                    📝 <span>Register</span>
+                                                    <i className="fas fa-file-alt me-2"></i> Register
                                                 </button>
                                             </>
                                         )}
                                     </div>
                                 </div>
                             )}
-
                             {showChatList && (
                                 <div className="chat-list" ref={chatListRef}>
                                     <h4>Tin nhắn</h4>
@@ -337,31 +466,40 @@ export default function Navbar() {
                                         <p>Không có tin nhắn nào</p>
                                     ) : (
                                         customers.map((customer, index) => (
-                                            <div key={index} className="chat-item" onClick={() => openChatBox(customer)}>
+                                            <div
+                                                key={index}
+                                                className="chat-item"
+                                                onClick={() => openChatBox(customer)}
+                                            >
                                                 {customer}
                                                 {customer === "admin" && unreadMessagesFromAdmin > 0 && (
-                                                    <span className="unread-badge">
-                                                        {unreadMessagesFromAdmin}
-                                                    </span>
+                                                    <span className="unread-badge">{unreadMessagesFromAdmin}</span>
                                                 )}
                                             </div>
                                         ))
                                     )}
                                 </div>
                             )}
-
                             {showChatBox && (
                                 <div className="chat-box">
                                     <div className="chat-header">
                                         <h5>Chat với {selectedCustomer}</h5>
-                                        <span className="close-icon" onClick={() => setShowChatBox(false)}>×</span>
+                                        <span
+                                            className="close-icon"
+                                            onClick={() => setShowChatBox(false)}
+                                        >
+                                            ×
+                                        </span>
                                     </div>
                                     <div className="chat-body" ref={chatRef}>
                                         {messages.length === 0 ? (
                                             <p style={{ textAlign: "center", color: "#888" }}>Không có tin nhắn nào</p>
                                         ) : (
                                             messages.map((msg, index) => (
-                                                <div key={index} className={msg.sender === user?.username ? "chat-message user" : "chat-message admin"}>
+                                                <div
+                                                    key={index}
+                                                    className={msg.sender === user?.username ? "chat-message user" : "chat-message admin"}
+                                                >
                                                     <strong>{msg.sender}:</strong> {msg.content}
                                                     <div className="timestamp">{new Date(msg.timestamp).toLocaleTimeString()}</div>
                                                 </div>
@@ -369,17 +507,17 @@ export default function Navbar() {
                                         )}
                                     </div>
                                     <div className="chat-footer">
-                                        <input 
-                                            type="text" 
-                                            value={message} 
-                                            onChange={(e) => setMessage(e.target.value)} 
+                                        <input
+                                            type="text"
+                                            value={message}
+                                            onChange={(e) => setMessage(e.target.value)}
                                             onKeyDown={(e) => {
                                                 if (e.key === "Enter" && !e.shiftKey) {
                                                     e.preventDefault();
                                                     sendMessage();
                                                 }
                                             }}
-                                            placeholder="Nhập tin nhắn..." 
+                                            placeholder="Nhập tin nhắn..."
                                         />
                                         <button onClick={sendMessage}>Gửi</button>
                                     </div>
@@ -393,92 +531,126 @@ export default function Navbar() {
     );
 }
 
-const styles = {
-    modalDropdown: {
-        position: 'absolute',
-        top: '50px',
-        right: '0',
-        width: '220px',
-        borderRadius: '10px',
-        boxShadow: '0px 4px 10px rgba(0, 0, 0, 0.2)',
-        backgroundColor: '#fff',
-        zIndex: 1000,
-        padding: '10px',
-        animation: 'fadeIn 0.3s ease-in-out',
-    },
-    modalContent: {
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        gap: '8px',
-    },
-    closeIcon: {
-        position: 'absolute',
-        top: '5px',
-        right: '10px',
-        cursor: 'pointer',
-        fontSize: '16px',
-        color: '#888',
-    },
-    avatar: {
-        width: '60px',
-        height: '60px',
-        borderRadius: '50%',
-        marginBottom: '8px',
-        border: '2px solid #ddd',
-        boxShadow: '0px 2px 5px rgba(0, 0, 0, 0.1)',
-    },
-    username: {
-        fontSize: '14px',
-        fontWeight: 'bold',
-        color: '#333',
-        textTransform: 'capitalize',
-        marginBottom: '5px',
-    },
-    menuItem: {
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'flex-start',
-        gap: '10px',
-        backgroundColor: '#f8f9fa',
-        color: '#333',
-        fontWeight: 'bold',
-        padding: '10px 15px',
-        width: '100%',
-        textAlign: 'left',
-        borderRadius: '5px',
-        textDecoration: 'none',
-        transition: 'background 0.3s ease, transform 0.2s ease',
-        cursor: 'pointer',
-    },
-    menuItemHover: {
-        backgroundColor: '#ff4d4f',
-        color: 'white',
-        transform: 'scale(1.05)',
-    },
-    logout: {
-        backgroundColor: '#d9534f',
-        color: 'white',
-        justifyContent: 'flex-start',
-    },
-};
-
-// Thêm CSS cho chat-item và badge
 const styleSheet = document.createElement("style");
 styleSheet.type = "text/css";
 styleSheet.innerText = `
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes slideDown {
+        from { opacity: 0; transform: translateY(-10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .modal-dropdown {
+    position: absolute;
+    top: 50px;
+    right: 10px;
+    width: 220px;
+    max-width: 220px;
+    border-radius: 10px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    background-color: #fff;
+    z-index: 1001;
+    padding: 10px;
+    animation: fadeIn 0.3s ease-in-out;
+    overflow: hidden;
+    }
+
+    @media (max-width: 991.98px) {
+    .modal-dropdown {
+        width: calc(100% - 20px); /* Chiếm toàn bộ chiều rộng trừ 10px padding mỗi bên */
+        max-width: none; /* Bỏ giới hạn max-width */
+        left: 10px; /* Căn trái với padding */
+        right: 10px; /* Đảm bảo kéo dài đến phải */
+        top: 60px; /* Điều chỉnh vị trí dọc nếu cần */
+    }
+    .modal-content {
+        width: 100%; /* Đảm bảo nội dung sử dụng toàn bộ chiều rộng modal */
+    }
+    .menu-item {
+        width: 100%; /* Đảm bảo các nút kéo dài toàn bộ chiều rộng */
+    }
+    }
+    .modal-content {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+    }
+    .close-icon {
+        position: absolute;
+        top: 5px;
+        right: 10px;
+        cursor: pointer;
+        font-size: 16px;
+        color: #888;
+        transition: color 0.3s ease;
+    }
+    .close-icon:hover {
+        color: #333;
+    }
+    .avatar {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        margin-bottom: 8px;
+        border: 2px solid #ddd;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    }
+    .username {
+        font-size: 14px;
+        font-weight: bold;
+        color: #333;
+        text-transform: capitalize;
+        margin-bottom: 5px;
+    }
+    .menu-item {
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 10px;
+        background-color: #f8f9fa;
+        color: #333;
+        font-size: 14px;
+        font-weight: bold;
+        padding: 10px 15px;
+        width: 100%;
+        text-align: left;
+        border-radius: 5px;
+        text-decoration: none;
+        transition: background 0.3s ease, transform 0.2s ease;
+        cursor: pointer;
+        border: none;
+    }
+    .menu-item:hover {
+        background-color: #fff3cd;
+        color: #007bff;
+        transform: scale(1.02);
+    }
+    .logout {
+        background-color: #d9534f;
+        color: white;
+    }
+    .logout:hover {
+        background-color: #c82333;
+        color: white;
+    }
     .chat-list {
         position: absolute;
         top: 50px;
-        right: 0;
+        right: 10px;
         width: 250px;
+        max-width: 250px;
         max-height: 300px;
         overflow-y: auto;
         background-color: #fff;
         border-radius: 12px;
-        box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.15);
-        z-index: 1000;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        z-index: 1001;
         padding: 12px;
+        animation: fadeIn 0.3s ease-in-out;
+        overflow: hidden;
     }
     .chat-list h4 {
         font-size: 16px;
@@ -502,7 +674,7 @@ styleSheet.innerText = `
         transform: translateY(-1px);
     }
     .unread-badge {
-        background-color: #FF5555;
+        background-color: #ff5555;
         color: white;
         font-size: 12px;
         font-weight: bold;
@@ -519,7 +691,7 @@ styleSheet.innerText = `
         height: 400px;
         background-color: #fff;
         border-radius: 14px;
-        box-shadow: 0px 8px 20px rgba(0, 0, 0, 0.15);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
         z-index: 1000;
         display: flex;
         flex-direction: column;
@@ -541,12 +713,12 @@ styleSheet.innerText = `
         font-size: 16px;
         font-weight: 500;
     }
-    .close-icon {
+    .chat-box .close-icon {
         cursor: pointer;
         font-size: 20px;
         transition: color 0.3s ease, transform 0.2s ease;
     }
-    .close-icon:hover {
+    .chat-box .close-icon:hover {
         color: #d1e7ff;
         transform: scale(1.1);
     }
@@ -567,7 +739,6 @@ styleSheet.innerText = `
         box-shadow: 0 2px 5px rgba(0, 0, 0, 0.12);
         border: 1px solid transparent;
         transition: transform 0.2s ease, box-shadow 0.2s ease;
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     }
     .chat-message:hover {
         transform: translateY(-2px);
@@ -580,44 +751,15 @@ styleSheet.innerText = `
         border-color: #b3e5fc;
     }
     .chat-message.admin {
-        background-color:rgb(241, 182, 182);
+        background-color: #f1b6b6;
         margin-right: auto;
         text-align: left;
-        border-color:rgb(148, 12, 141);
+        border-color: #940c8d;
         box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
-    }
-    .chat-message.consecutive {
-        margin-bottom: 4px;
-        border-radius: 12px;
-    }
-    .chat-message.consecutive:first-of-type {
-        border-top-left-radius: 12px;
-        border-top-right-radius: 12px;
-    }
-    .chat-message.consecutive:last-of-type {
-        border-bottom-left-radius: 12px;
-        border-bottom-right-radius: 12px;
-    }
-    .sender-name {
-        font-size: 14px;
-        color: #333 !important;
-        margin-bottom: 2px;
-        display: block;
-        font-weight: 500;
-    }
-    .message-content {
-        font-size: 14px;
-        color: #333 !important;
-        min-height: 14px;
-    }
-    .message-content:empty::before {
-        content: "[Tin nhắn trống]";
-        color: #888 !important;
-        font-style: italic;
     }
     .timestamp {
         font-size: 11px;
-        color: #888 !important;
+        color: #888;
         margin-top: 4px;
         text-align: right;
         opacity: 0.8;
@@ -659,6 +801,72 @@ styleSheet.innerText = `
     .chat-footer button:hover {
         background-color: #0056b3;
         transform: scale(1.05);
+    }
+    .navbar-toggler .fa-bars {
+        color: #28a745;
+    }
+    .navbar-toggler {
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        padding: 8px;
+        transition: background-color 0.2s ease;
+    }
+    .navbar-toggler:hover {
+        background-color: #f8f9fa;
+    }
+    @media (max-width: 991.98px) {
+        .navbar-collapse {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background-color: #fff;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            max-height: calc(100vh - 70px);
+            overflow-y: auto;
+            animation: slideDown 0.3s ease-in-out;
+        }
+        .navbar-nav {
+            padding: 10px 0;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        .nav-link {
+            padding: 12px 20px;
+            font-size: 16px;
+            color: #333;
+            width: 100%;
+        }
+        .nav-link:hover, .nav-link.active {
+            background-color: #f8f9fa;
+            color: #007bff;
+        }
+        .mobile-dropdown {
+            background-color: #f8f9fa;
+            margin-left: 20px;
+            padding: 10px 0;
+            width: calc(100% - 40px);
+            animation: slideDown 0.3s ease-in-out;
+        }
+        .mobile-dropdown-item {
+            padding: 10px 20px;
+            font-size: 15px;
+            color: #333;
+            display: block;
+        }
+        .mobile-dropdown-item:hover {
+            background-color: #e9ecef;
+            color: #007bff;
+        }
+    }
+    @media (min-width: 992px) {
+        .nav-link:hover, .nav-link.active {
+            color: #007bff;
+        }
+        .dropdown-menu {
+            animation: fadeIn 0.3s ease-in-out;
+        }
     }
 `;
 document.head.appendChild(styleSheet);

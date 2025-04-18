@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Bar } from 'react-chartjs-2';
 import { Chart, registerables } from 'chart.js';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom'; // Import useNavigate
+import { useNavigate } from 'react-router-dom';
 import API_BASE_URL from '../../../utils/config';
 
 Chart.register(...registerables);
@@ -13,35 +13,49 @@ const AdminDashboard = () => {
   const [newUsers, setNewUsers] = useState(0);
   const [totalProducts, setTotalProducts] = useState(0);
   const [salesOverTime, setSalesOverTime] = useState([]);
-  
-  const navigate = useNavigate(); // Hook điều hướng
+  const [loading, setLoading] = useState(true); // Thêm trạng thái loading
+  const [error, setError] = useState(null); // Thêm trạng thái lỗi
+
+  const navigate = useNavigate();
 
   useEffect(() => {
     const token = localStorage.getItem('token');
-    
-    axios.get(`${API_BASE_URL}/orders/statistics`, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    })
-    .then(response => {
-      const { totalOrders, totalRevenue, newUsers, totalProducts, salesOverTime } = response.data;
-      setTotalOrders(totalOrders);
-      setTotalRevenue(totalRevenue);
-      setNewUsers(newUsers);
-      setTotalProducts(totalProducts);
-      setSalesOverTime(salesOverTime);
-    })
-    .catch(error => {
-      console.error("Error fetching statistics:", error);
-    });
-  }, []);
+    if (!token) {
+      navigate('/login'); // Chuyển hướng nếu không có token
+      return;
+    }
+
+    axios
+      .get(`${API_BASE_URL}/orders/statistics`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .then((response) => {
+        const { totalOrders, totalRevenue, newUsers, totalProducts, salesOverTime } = response.data;
+        setTotalOrders(totalOrders || 0);
+        setTotalRevenue(totalRevenue || 0); // Gán giá trị mặc định nếu null
+        setNewUsers(newUsers || 0);
+        setTotalProducts(totalProducts || 0);
+        setSalesOverTime(salesOverTime || []);
+        setLoading(false);
+      })
+      .catch((error) => {
+        console.error('Error fetching statistics:', error);
+        setError('Failed to load statistics');
+        setLoading(false);
+      });
+  }, [navigate]);
+
+  // Hiển thị loading hoặc lỗi
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div>{error}</div>;
 
   // Dữ liệu biểu đồ
   const data = {
-    labels: salesOverTime.map(item => item[0]),
+    labels: salesOverTime.map((item) => item[0]),
     datasets: [
       {
         label: 'Sales',
-        data: salesOverTime.map(item => item[1]),
+        data: salesOverTime.map((item) => item[1]),
         backgroundColor: 'rgba(75, 192, 192, 0.6)',
         borderColor: 'rgba(75, 192, 192, 1)',
         borderWidth: 1,
@@ -49,7 +63,6 @@ const AdminDashboard = () => {
     ],
   };
 
-  // Tùy chọn biểu đồ
   const options = {
     responsive: true,
     maintainAspectRatio: false,
@@ -72,7 +85,7 @@ const AdminDashboard = () => {
         </div>
         <div className="card" onClick={() => navigate('#')}>
           <h2>Total Revenue</h2>
-          <p>${totalRevenue.toFixed(2)}</p>
+          <p>${(totalRevenue || 0).toFixed(2)}</p> {/* Xử lý null/undefined */}
         </div>
         <div className="card" onClick={() => navigate('/admin/customers')}>
           <h2>New Users</h2>
