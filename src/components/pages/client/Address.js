@@ -1,6 +1,6 @@
-import API_BASE_URL from '../../../utils/config';
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import axiosInstance from '../admin/axiosInstance'; // Điều chỉnh đường dẫn
+import API_BASE_URL from '../../../utils/config';
 
 function Address() {
     const [address, setAddress] = useState({
@@ -12,12 +12,12 @@ function Address() {
         postalCode: '',
         country: '',
         phone: '',
-        email: '' // Thêm thuộc tính email
+        email: ''
     });
     const [isNewAddress, setIsNewAddress] = useState(true);
     const [user, setUser] = useState({});
     const [avatarUrl, setAvatarUrl] = useState('');
-    const [errors, setErrors] = useState({}); // Thêm state để lưu lỗi validation
+    const [errors, setErrors] = useState({});
 
     useEffect(() => {
         const token = localStorage.getItem('token');
@@ -27,52 +27,41 @@ function Address() {
         }
 
         // Lấy thông tin người dùng
-        axios.get(`${API_BASE_URL}/auth/user`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        })
-        .then(response => {
-            setUser(response.data);
-            // Nếu là địa chỉ mới, gán email mặc định từ user
-            if (isNewAddress) {
-                setAddress(prev => ({ ...prev, email: response.data.email || '' }));
-            }
-        })
-        .catch(error => {
-            console.error('Error fetching user:', error);
-        });
+        axiosInstance.get('/auth/user')
+            .then(response => {
+                setUser(response.data);
+                if (isNewAddress) {
+                    setAddress(prev => ({ ...prev, email: response.data.email || '' }));
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching user:', error.response?.status, error.response?.data);
+                alert('Lỗi tải thông tin người dùng. Vui lòng thử lại.');
+            });
 
         // Lấy danh sách địa chỉ
-        axios.get(`${API_BASE_URL}/addresses/view`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        })
-        .then(response => {
-            if (response.data.length > 0) {
-                setAddress(response.data[0]);
-                setIsNewAddress(false);
-            }
-        })
-        .catch(error => {
-            console.error('Error fetching address:', error);
-        });
+        axiosInstance.get('/addresses/view')
+            .then(response => {
+                if (response.data.length > 0) {
+                    setAddress(response.data[0]); // AddressDTO tương thích
+                    setIsNewAddress(false);
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching address:', error.response?.status, error.response?.data);
+                if (error.response?.status !== 404) { // 404 có thể là chưa có địa chỉ
+                    alert('Lỗi tải danh sách địa chỉ. Vui lòng thử lại.');
+                }
+            });
     }, []);
 
     const validateForm = () => {
         const newErrors = {};
-        if (!address.addressLine1.trim()) {
-            newErrors.addressLine1 = 'Address Line 1 không được để trống';
-        }
-        if (!address.city.trim()) {
-            newErrors.city = 'City không được để trống';
-        }
-        if (!address.postalCode.trim()) {
-            newErrors.postalCode = 'Postal Code không được để trống';
-        }
-        if (!address.country.trim()) {
-            newErrors.country = 'Country không được để trống';
-        }
-        if (!address.phone.trim()) {
-            newErrors.phone = 'Phone không được để trống';
-        }
+        if (!address.addressLine1.trim()) newErrors.addressLine1 = 'Address Line 1 không được để trống';
+        if (!address.city.trim()) newErrors.city = 'City không được để trống';
+        if (!address.postalCode.trim()) newErrors.postalCode = 'Postal Code không được để trống';
+        if (!address.country.trim()) newErrors.country = 'Country không được để trống';
+        if (!address.phone.trim()) newErrors.phone = 'Phone không được để trống';
         if (!address.email.trim()) {
             newErrors.email = 'Email không được để trống';
         } else if (!/\S+@\S+\.\S+/.test(address.email)) {
@@ -87,7 +76,6 @@ function Address() {
             ...address,
             [e.target.name]: e.target.value
         });
-        // Xóa lỗi khi người dùng nhập
         if (errors[e.target.name]) {
             setErrors({ ...errors, [e.target.name]: '' });
         }
@@ -96,51 +84,48 @@ function Address() {
     const handleCreate = () => {
         if (!validateForm()) return;
 
-        const token = localStorage.getItem('token');
-        axios.post(`${API_BASE_URL}/addresses/create`, address, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        })
-        .then(response => {
-            alert('Address created successfully!');
-            setAddress(response.data);
-            setIsNewAddress(false);
-        })
-        .catch(error => {
-            console.error('Error creating address:', error);
-            alert('Không thể tạo địa chỉ. Vui lòng thử lại.');
-        });
+        axiosInstance.post('/addresses/create', address)
+            .then(response => {
+                // Chỉ lấy các trường cần thiết từ Address
+                const { id, addressLine1, addressLine2, city, state, postalCode, country, phone, email } = response.data;
+                setAddress({ id, addressLine1, addressLine2, city, state, postalCode, country, phone, email });
+                setIsNewAddress(false);
+                alert('Address created successfully!');
+            })
+            .catch(error => {
+                console.error('Error creating address:', error.response?.status, error.response?.data);
+                alert('Không thể tạo địa chỉ. Vui lòng thử lại.');
+            });
     };
 
     const handleUpdate = () => {
         if (!validateForm()) return;
 
-        const token = localStorage.getItem('token');
-        axios.put(`${API_BASE_URL}/addresses/${address.id}`, address, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        })
-        .then(response => {
-            alert('Address updated successfully!');
-        })
-        .catch(error => {
-            console.error('Error updating address:', error);
-            alert('Không thể cập nhật địa chỉ. Vui lòng thử lại.');
-        });
+        axiosInstance.put(`/addresses/${address.id}`, address)
+            .then(response => {
+                // Cập nhật state với các trường cần thiết
+                const { id, addressLine1, addressLine2, city, state, postalCode, country, phone, email } = response.data;
+                setAddress({ id, addressLine1, addressLine2, city, state, postalCode, country, phone, email });
+                alert('Address updated successfully!');
+            })
+            .catch(error => {
+                console.error('Error updating address:', error.response?.status, error.response?.data);
+                alert('Không thể cập nhật địa chỉ. Vui lòng thử lại.');
+            });
     };
 
     const handleAvatarChange = () => {
-        const token = localStorage.getItem('token');
-        axios.put(`${API_BASE_URL}/auth/update-avatar`, { avatar: avatarUrl }, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        })
-        .then(response => {
-            setUser({ ...user, avatar: avatarUrl });
-            const modalElement = document.getElementById('avatarModal');
-            const modal = window.bootstrap.Modal.getInstance(modalElement);
-            modal.hide();
-        })
-        .catch(error => {
-            console.error('Error updating avatar:', error);
-        });
+        axiosInstance.put('/auth/update-avatar', { avatar: avatarUrl })
+            .then(response => {
+                setUser({ ...user, avatar: avatarUrl });
+                const modalElement = document.getElementById('avatarModal');
+                const modal = window.bootstrap.Modal.getInstance(modalElement);
+                modal.hide();
+            })
+            .catch(error => {
+                console.error('Error updating avatar:', error.response?.status, error.response?.data);
+                alert('Lỗi cập nhật avatar. Vui lòng thử lại.');
+            });
     };
 
     return (
@@ -150,10 +135,16 @@ function Address() {
                     {user.avatar && (
                         <>
                             <img src={user.avatar} alt="Avatar" className="img-fluid rounded-circle mb-4" />
-                            <button type="button" className="btn btn-secondary mt-2" onClick={() => {
-                                const modal = new window.bootstrap.Modal(document.getElementById('avatarModal'));
-                                modal.show();
-                            }}>Edit Avatar</button>
+                            <button
+                                type="button"
+                                className="btn btn-secondary mt-2"
+                                onClick={() => {
+                                    const modal = new window.bootstrap.Modal(document.getElementById('avatarModal'));
+                                    modal.show();
+                                }}
+                            >
+                                Edit Avatar
+                            </button>
                         </>
                     )}
                 </div>
@@ -247,15 +238,18 @@ function Address() {
                             {errors.email && <div className="invalid-feedback">{errors.email}</div>}
                         </div>
                         {isNewAddress ? (
-                            <button type="button" className="btn btn-primary mt-4" onClick={handleCreate}>Create</button>
+                            <button type="button" className="btn btn-primary mt-4" onClick={handleCreate}>
+                                Create
+                            </button>
                         ) : (
-                            <button type="button" className="btn btn-primary mt-4" onClick={handleUpdate}>Update</button>
+                            <button type="button" className="btn btn-primary mt-4" onClick={handleUpdate}>
+                                Update
+                            </button>
                         )}
                     </form>
                 </div>
             </div>
 
-            {/* Modal for updating avatar */}
             <div className="modal fade" id="avatarModal" tabIndex="-1" aria-labelledby="avatarModalLabel" aria-hidden="true">
                 <div className="modal-dialog">
                     <div className="modal-content">
@@ -273,8 +267,12 @@ function Address() {
                             />
                         </div>
                         <div className="modal-footer">
-                            <button type="button" className="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                            <button type="button" className="btn btn-primary" onClick={handleAvatarChange}>Save changes</button>
+                            <button type="button" className="btn btn-secondary" data-bs-dismiss="modal">
+                                Close
+                            </button>
+                            <button type="button" className="btn btn-primary" onClick={handleAvatarChange}>
+                                Save changes
+                            </button>
                         </div>
                     </div>
                 </div>

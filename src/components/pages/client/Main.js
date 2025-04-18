@@ -243,9 +243,9 @@ export default function Main() {
                                                         <h4>{product.name}</h4>
                                                         <p className="DesProduct" style={{ color: 'black' }}>{product.description}</p>
                                                         <div className="d-flex justify-content-between flex-lg-wrap">
-                                                            <p className="text-dark fs-5 fw-bold mb-0">${product.price}</p>
+                                                            <p className="text-dark fs-5 fw-bold mb-0">{product.price}VNĐ</p>
                                                             <a href="#" className="btn border border-secondary rounded-pill px-3 text-primary" onClick={() => handleAddToCart(product.id)}>
-                                                                <i className="fa fa-shopping-bag me-2 text-primary"></i> Thêm vào giỏ
+                                                                Thêm <i className="fa fa-shopping-bag me-2 text-primary"></i> 
                                                             </a>
                                                         </div>
                                                     </div>
@@ -296,7 +296,7 @@ export default function Main() {
                                                 <i className="fas fa-star text-primary"></i>
                                                 <i className="fas fa-star"></i>
                                             </div>
-                                            <h4 className="mb-3">${product.price}</h4>
+                                            <h4 className="mb-3">{product.price}VNĐ</h4>
                                             <a href="#" className="btn border border-secondary rounded-pill px-3 text-primary" onClick={() => handleAddToCart(product.id)}>
                                                 <i className="fa fa-shopping-bag me-2 text-primary"></i> Thêm vào giỏ
                                             </a>
