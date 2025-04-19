@@ -127,7 +127,7 @@ function ShopDetail() {
                                 <div className="col-lg-6 text-start">
                                     <h4 className="fw-bold mb-3">{product.name}</h4>
                                     <p className="mb-3 text-start" style={{color:'black'}}>Category: {product.category.name}</p>
-                                    <h5 className="fw-bold mb-3">${product.price}</h5>
+                                    <h5 className="fw-bold mb-3">{product.price} VNĐ</h5>
                                     <div className="d-flex mb-4">
                                         <i className="fa fa-star text-secondary"></i>
                                         <i className="fa fa-star text-secondary"></i>

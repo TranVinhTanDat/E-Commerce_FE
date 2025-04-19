@@ -3,6 +3,8 @@ import axiosInstance from "./axiosInstance";
 import Modal from "react-modal";
 
 const API_BASE_URL = "https://e-commerce-fe-seven-snowy.vercel.app/admin/users";
+// const API_BASE_URL = "hhttp://localhost:8080/admin/users";
+
 
 Modal.setAppElement("#root");
 
