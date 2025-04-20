@@ -4,18 +4,15 @@ import { Client } from "@stomp/stompjs";
 import SockJS from "sockjs-client";
 import API_BASE_URL from '../../../utils/config';
 
-// const API_BASE_URL = "http://localhost:8080";
-
 const AdminChat = () => {
   const [client, setClient] = useState(null);
-  const [customers, setCustomers] = useState([]); // Danh sách khách hàng đang chat
+  const [customers, setCustomers] = useState([]);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [messages, setMessages] = useState([]);
   const [message, setMessage] = useState("");
-  const [unreadMessages, setUnreadMessages] = useState({}); // Lưu số tin nhắn chưa đọc
+  const [unreadMessages, setUnreadMessages] = useState({});
   const chatRef = useRef(null);
 
-  // Hàm lấy số tin nhắn chưa đọc từ API
   const fetchUnreadMessagesCount = async () => {
     const token = localStorage.getItem("token");
     try {
@@ -29,14 +26,47 @@ const AdminChat = () => {
     }
   };
 
+  const formatTimestamp = (timestamp) => {
+    if (!timestamp) return "Đang gửi...";
+    const messageDate = new Date(timestamp);
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(today.getDate() - 1);
+
+    const isToday = messageDate.toDateString() === today.toDateString();
+    const isYesterday = messageDate.toDateString() === yesterday.toDateString();
+
+    if (isToday) {
+      return `Hôm nay, ${messageDate.toLocaleTimeString('vi-VN', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+      })}`;
+    } else if (isYesterday) {
+      return `Hôm qua, ${messageDate.toLocaleTimeString('vi-VN', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+      })}`;
+    } else {
+      return messageDate.toLocaleString('vi-VN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+      });
+    }
+  };
+
   useEffect(() => {
-    const token = localStorage.getItem("token"); // Lấy token từ localStorage
+    const token = localStorage.getItem("token");
     if (!token) {
       console.error("❌ Không tìm thấy JWT token!");
       return;
     }
 
-    // Gọi API lấy danh sách khách hàng đang chat
     axios
       .get(`${API_BASE_URL}/messages/customers`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -47,27 +77,27 @@ const AdminChat = () => {
       })
       .catch((error) => console.error("🔥 Lỗi khi lấy danh sách khách hàng:", error));
 
-    // Gọi API lấy số tin nhắn chưa đọc ban đầu
     fetchUnreadMessagesCount();
 
-    // Kết nối WebSocket với STOMP qua SockJS
     const stompClient = new Client({
       webSocketFactory: () => new SockJS(`${API_BASE_URL}/ws`),
       connectHeaders: {
-        Authorization: `Bearer ${token}`, // Gửi JWT để xác thực WebSocket
+        Authorization: `Bearer ${token}`,
       },
       reconnectDelay: 5000,
       debug: (msg) => console.log("STOMP DEBUG:", msg),
       onConnect: () => {
         console.log("✅ STOMP Client connected!");
 
-        // Nhận tin nhắn từ khách hàng (broadcast)
         stompClient.subscribe("/topic/messages", (message) => {
           const receivedMessage = JSON.parse(message.body);
           console.log("Tin nhắn nhận được từ /topic/messages:", receivedMessage);
-          setMessages((prev) => [...prev, receivedMessage]);
+          setMessages((prev) => {
+            const updatedMessages = [...prev, receivedMessage];
+            localStorage.setItem(`messages_admin_${selectedCustomer}`, JSON.stringify(updatedMessages));
+            return updatedMessages;
+          });
 
-          // Nếu khách hàng chưa có trong danh sách thì thêm vào
           setCustomers((prevCustomers) => {
             if (!prevCustomers.includes(receivedMessage.sender) && receivedMessage.sender !== "admin") {
               const newCustomers = [...prevCustomers, receivedMessage.sender];
@@ -76,16 +106,36 @@ const AdminChat = () => {
             return prevCustomers;
           });
 
-          // Cập nhật số tin nhắn chưa đọc sau khi nhận tin nhắn
           if (receivedMessage.sender !== "admin" && receivedMessage.sender !== selectedCustomer) {
-            fetchUnreadMessagesCount(); // Gọi API để cập nhật số tin nhắn chưa đọc
+            fetchUnreadMessagesCount();
           }
         });
 
-        // Nhận tin nhắn riêng tư từ Admin
         stompClient.subscribe("/user/queue/private", (message) => {
-          console.log("📩 Tin nhắn riêng tư nhận được:", message.body);
-          setMessages((prev) => [...prev, JSON.parse(message.body)]);
+          const receivedMessage = JSON.parse(message.body);
+          console.log("📩 Tin nhắn riêng tư nhận được:", receivedMessage);
+
+          setMessages((prev) => {
+            const existingMessage = prev.find(
+              (msg) =>
+                msg.sender === receivedMessage.sender &&
+                msg.receiver === receivedMessage.receiver &&
+                msg.content === receivedMessage.content &&
+                msg.timestamp === receivedMessage.timestamp
+            );
+
+            if (existingMessage) {
+              const updatedMessages = prev.map((msg) =>
+                msg === existingMessage ? { ...msg, timestamp: receivedMessage.timestamp } : msg
+              );
+              localStorage.setItem(`messages_admin_${selectedCustomer}`, JSON.stringify(updatedMessages));
+              return updatedMessages;
+            } else {
+              const updatedMessages = [...prev, receivedMessage];
+              localStorage.setItem(`messages_admin_${selectedCustomer}`, JSON.stringify(updatedMessages));
+              return updatedMessages;
+            }
+          });
         });
       },
       onStompError: (frame) => console.error("🔥 Lỗi STOMP:", frame),
@@ -104,36 +154,42 @@ const AdminChat = () => {
     }
   }, [messages]);
 
-  // Gọi API lấy lịch sử tin nhắn và đánh dấu tin nhắn đã đọc khi chọn khách hàng
   const handleSelectCustomer = (customer) => {
     setSelectedCustomer(customer);
 
     const token = localStorage.getItem("token");
-    // Đánh dấu tất cả tin nhắn từ khách hàng là đã đọc
     axios
       .post(`${API_BASE_URL}/messages/mark-read/${customer}`, null, {
         headers: { Authorization: `Bearer ${token}` },
       })
       .then(() => {
-        // Thêm độ trễ 500ms để đảm bảo giao dịch được commit
         setTimeout(() => {
           fetchUnreadMessagesCount();
         }, 500);
       })
       .catch((error) => console.error("🔥 Lỗi khi đánh dấu tin nhắn đã đọc:", error));
 
-    // Lấy lịch sử tin nhắn
+    const savedMessages = localStorage.getItem(`messages_admin_${customer}`);
+    if (savedMessages) {
+      setMessages(JSON.parse(savedMessages));
+    }
+
     axios
       .get(`${API_BASE_URL}/messages/${customer}/admin`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       .then((response) => {
-        setMessages(response.data); // Hiển thị lịch sử tin nhắn
+        setMessages((prev) => {
+          const existingMessageIds = new Set(prev.map((msg) => msg.id));
+          const newMessages = response.data.filter((msg) => !existingMessageIds.has(msg.id));
+          const updatedMessages = [...prev, ...newMessages];
+          localStorage.setItem(`messages_admin_${customer}`, JSON.stringify(updatedMessages));
+          return updatedMessages;
+        });
       })
       .catch((error) => console.error("🔥 Lỗi khi lấy lịch sử tin nhắn:", error));
   };
 
-  // Gửi tin nhắn từ Admin đến khách hàng
   const sendMessage = () => {
     if (!selectedCustomer) {
       alert("Vui lòng chọn khách hàng để chat!");
@@ -146,9 +202,18 @@ const AdminChat = () => {
     }
 
     if (message.trim() !== "") {
-      const msg = { sender: "admin", receiver: selectedCustomer, content: message };
+      const msg = { 
+        sender: "admin", 
+        receiver: selectedCustomer, 
+        content: message, 
+        timestamp: new Date().toISOString()
+      };
       client.publish({ destination: "/app/private-message", body: JSON.stringify(msg) });
-      setMessages([...messages, msg]);
+      setMessages((prev) => {
+        const updatedMessages = [...prev, msg];
+        localStorage.setItem(`messages_admin_${selectedCustomer}`, JSON.stringify(updatedMessages));
+        return updatedMessages;
+      });
       setMessage("");
     }
   };
@@ -183,7 +248,7 @@ const AdminChat = () => {
             .map((msg, index) => (
               <div key={index} style={msg.sender === "admin" ? styles.adminMsg : styles.userMsg}>
                 <strong>{msg.sender}:</strong> {msg.content}
-                <div style={styles.timestamp}>{new Date(msg.timestamp).toLocaleTimeString()}</div>
+                <div style={styles.timestamp}>{formatTimestamp(msg.timestamp)}</div>
               </div>
             ))}
         </div>
@@ -194,7 +259,7 @@ const AdminChat = () => {
             placeholder="Nhập tin nhắn..."
             value={message}
             onChange={(e) => setMessage(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && sendMessage()} // Nhấn Enter để gửi
+            onKeyDown={(e) => e.key === "Enter" && sendMessage()}
             disabled={!selectedCustomer}
             style={styles.input}
           />
@@ -207,9 +272,6 @@ const AdminChat = () => {
   );
 };
 
-export default AdminChat;
-
-// STYLE OBJECT (DARK MODE)
 const styles = {
   adminChatContainer: {
     display: "flex",
@@ -341,3 +403,5 @@ const styles = {
     minWidth: "20px",
   },
 };
+
+export default AdminChat;

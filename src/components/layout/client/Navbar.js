@@ -87,12 +87,12 @@ export default function Navbar() {
         function handleClickOutside(event) {
             console.log("Clicked element:", event.target);
             if (modalRef.current && !modalRef.current.contains(event.target)) {
-              setShowModal(false);
+                setShowModal(false);
             }
             if (chatListRef.current && !chatListRef.current.contains(event.target)) {
-              setShowChatList(false);
+                setShowChatList(false);
             }
-          }
+        }
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
@@ -118,14 +118,27 @@ export default function Navbar() {
             debug: (msg) => console.log("STOMP DEBUG:", msg),
             onConnect: () => {
                 console.log("✅ STOMP Client connected!");
-                clientRef.current.subscribe("/user/queue/private", (msg) => {
+                // Đăng ký nhận tin nhắn riêng tư
+                clientRef.current.subscribe(`/user/${user.username}/queue/private`, (msg) => {
                     const newMessage = JSON.parse(msg.body);
                     console.log("📩 Tin nhắn riêng tư mới:", newMessage);
-                    setMessages((prev) => [...prev, newMessage]);
+                    setMessages((prev) => {
+                        const updatedMessages = [...prev, newMessage];
+                        // Lưu messages vào localStorage để giữ trạng thái nếu cần
+                        localStorage.setItem(`messages_${user.username}_${newMessage.receiver}`, JSON.stringify(updatedMessages));
+                        return updatedMessages;
+                    });
+                    // Tự động mở chat box nếu tin nhắn từ admin và chat box chưa mở
                     if (newMessage.sender === "admin" && !showChatBox) {
+                        setSelectedCustomer("admin");
+                        setShowChatBox(true);
+                        fetchUnreadMessagesFromAdmin();
+                    } else if (newMessage.sender === "admin" && showChatBox && selectedCustomer === "admin") {
                         fetchUnreadMessagesFromAdmin();
                     }
                 });
+
+                // Đăng ký nhận tin nhắn broadcast (nếu cần)
                 clientRef.current.subscribe("/topic/messages", (msg) => {
                     const newMessage = JSON.parse(msg.body);
                     console.log("📩 Tin nhắn từ topic:", newMessage);
@@ -138,7 +151,7 @@ export default function Navbar() {
 
         clientRef.current.activate();
         return () => clientRef.current.deactivate();
-    }, [user, showChatBox]);
+    }, [user]); // Chỉ phụ thuộc vào user
 
     const sendMessage = () => {
         if (message.trim() === "") return;
@@ -184,8 +197,16 @@ export default function Navbar() {
             });
 
             if (Array.isArray(response.data)) {
-                console.log("📩 Tin nhắn nhận được:", response.data);
-                setMessages(response.data);
+                console.log("📩 Tin nhắn nhận được từ API:", response.data);
+                // Kết hợp dữ liệu từ API với messages hiện tại, loại bỏ trùng lặp
+                setMessages((prev) => {
+                    const existingMessageIds = new Set(prev.map((msg) => msg.id)); // Giả sử mỗi tin nhắn có id
+                    const newMessages = response.data.filter((msg) => !existingMessageIds.has(msg.id));
+                    const updatedMessages = [...prev, ...newMessages];
+                    // Lưu vào localStorage
+                    localStorage.setItem(`messages_${user.username}_${customer}`, JSON.stringify(updatedMessages));
+                    return updatedMessages;
+                });
             } else {
                 console.error("⚠ API không trả về danh sách tin nhắn hợp lệ.");
             }
@@ -193,6 +214,15 @@ export default function Navbar() {
             console.error("🔥 Lỗi khi lấy lịch sử tin nhắn:", error);
         }
     };
+
+    useEffect(() => {
+        if (!user?.username || !selectedCustomer) return;
+        // Khởi tạo messages từ localStorage
+        const savedMessages = localStorage.getItem(`messages_${user.username}_${selectedCustomer}`);
+        if (savedMessages) {
+            setMessages(JSON.parse(savedMessages));
+        }
+    }, [user, selectedCustomer]);
 
     const openChatBox = async (customer) => {
         setSelectedCustomer(customer);
@@ -501,7 +531,16 @@ export default function Navbar() {
                                                     className={msg.sender === user?.username ? "chat-message user" : "chat-message admin"}
                                                 >
                                                     <strong>{msg.sender}:</strong> {msg.content}
-                                                    <div className="timestamp">{new Date(msg.timestamp).toLocaleTimeString()}</div>
+                                                    <div className="timestamp">
+                                                        {new Date(msg.timestamp).toLocaleString('vi-VN', {
+                                                            year: 'numeric',
+                                                            month: '2-digit',
+                                                            day: '2-digit',
+                                                            hour: '2-digit',
+                                                            minute: '2-digit',
+                                                            second: '2-digit',
+                                                        })}
+                                                    </div>
                                                 </div>
                                             ))
                                         )}
