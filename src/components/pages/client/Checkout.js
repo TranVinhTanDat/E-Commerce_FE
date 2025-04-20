@@ -326,9 +326,9 @@ function Checkout() {
                                                         </div>
                                                     </th>
                                                     <td className="py-5">{item.product.name}</td>
-                                                    <td className="py-5">${item.product.price.toFixed(2)}</td>
+                                                    <td className="py-5">{item.product.price.toFixed(0)} VNĐ</td>
                                                     <td className="py-5">{quantities[item.id]}</td>
-                                                    <td className="py-5">${(item.product.price * quantities[item.id]).toFixed(2)}</td>
+                                                    <td className="py-5">{(item.product.price * quantities[item.id]).toFixed(0)} VNĐ</td>
                                                 </tr>
                                             ))}
                                             <tr>
@@ -341,7 +341,7 @@ function Checkout() {
                                                 </td>
                                                 <td className="py-5">
                                                     <div className="py-3 border-bottom border-top">
-                                                        <p className="mb-0 text-dark">${subtotal.toFixed(2)}</p>
+                                                        <p className="mb-0 text-dark">{subtotal.toFixed(0)} VNĐ</p>
                                                     </div>
                                                 </td>
                                             </tr>
@@ -376,7 +376,7 @@ function Checkout() {
                                                 <td className="py-5"></td>
                                                 <td className="py-5">
                                                     <div className="py-3 border-bottom border-top">
-                                                        <p className="mb-0 text-dark">${total.toFixed(2)}</p>
+                                                        <p className="mb-0 text-dark">{total.toFixed(0)}VNĐ</p>
                                                     </div>
                                                 </td>
                                             </tr>

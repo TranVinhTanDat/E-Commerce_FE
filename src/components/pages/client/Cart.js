@@ -173,7 +173,7 @@ function Cart() {
                                                     <p style={{textAlign:'left'}} className="mb-0 mt-4">{item.product.name}</p>
                                                 </td>
                                                 <td>
-                                                    <p style={{textAlign:'left'}} className="mb-0 mt-4">${item.product.price.toFixed(2)}</p>
+                                                    <p style={{textAlign:'left'}} className="mb-0 mt-4">{item.product.price.toFixed(0)} VNĐ</p>
                                                 </td>
                                                 <td>
                                                     <div className="input-group quantity mt-4" style={{ width: '100px' }}>
@@ -191,7 +191,7 @@ function Cart() {
                                                     </div>
                                                 </td>
                                                 <td>
-                                                    <p style={{textAlign:'left'}} className="mb-0 mt-4">${(item.product.price * quantities[item.id]).toFixed(2)}</p>
+                                                    <p style={{textAlign:'left'}} className="mb-0 mt-4">{(item.product.price * quantities[item.id]).toFixed(0)} VNĐ</p>
                                                 </td>
                                                 <td>
                                                     <button style={{borderRadius:'50%',width:'50px'}}  className="btn btn-md rounded-circle bg-light border mt-4" onClick={() => handleRemoveItem(item.id)}>
@@ -211,19 +211,19 @@ function Cart() {
                                             <h1 className="display-6 mb-4">Cart <span className="fw-normal">Total</span></h1>
                                             <div className="d-flex justify-content-between mb-4">
                                                 <h5 className="mb-0 me-4">Subtotal:</h5>
-                                                <p className="mb-0">${subtotal.toFixed(2)}</p>
+                                                <p className="mb-0">{subtotal.toFixed(0)} VNĐ</p>
                                             </div>
                                             <div className="d-flex justify-content-between">
                                                 <h5 className="mb-0 me-4">Shipping</h5>
                                                 <div className="">
-                                                    <p className="mb-0">Flat rate: ${shipping.toFixed(2)}</p>
+                                                    <p className="mb-0">Flat rate: {shipping.toFixed(0)} VNĐ</p>
                                                 </div>
                                             </div>
-                                            <p className="mb-0 text-end">Shipping to Ukraine.</p>
+                                            <p className="mb-0 text-end">Shipping to VietNam.</p>
                                         </div>
                                         <div className="py-4 mb-4 border-top border-bottom d-flex justify-content-between">
                                             <h5 className="mb-0 ps-4 me-4">Total</h5>
-                                            <p className="mb-0 pe-4">${total.toFixed(2)}</p>
+                                            <p className="mb-0 pe-4">{total.toFixed(0)} VNĐ</p>
                                         </div>
                                         <button className="btn border-secondary rounded-pill px-4 py-3 text-primary text-uppercase mb-4 ms-4" style={{width:'360px'}} type="button" onClick={handleProceedCheckout}>Proceed Checkout</button>
                                     </div>

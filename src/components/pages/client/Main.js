@@ -577,6 +577,41 @@ export default function Main() {
         </div>
       </div>
       {/* Testimonial End */}
+
+      {/* Thêm CSS để đồng bộ kích thước các item */}
+      <style>
+      {`
+        .fruite-item {
+          display: flex;
+          flex-direction: column;
+          height: 500px; /* Tăng chiều cao từ 450px lên 500px */
+          overflow: hidden; /* Ẩn nội dung vượt quá chiều cao */
+        }
+
+        .fruite-img img {
+          width: 100%;
+          height: 300px; /* Tăng chiều cao ảnh từ 200px lên 250px */
+          object-fit: cover; /* Ảnh sẽ được cắt để lấp đầy khung mà không bị méo */
+          display: block;
+        }
+
+        .fruite-item .p-4 {
+          flex: 1; /* Phần nội dung sẽ mở rộng để lấp đầy không gian còn lại */
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between; /* Đảm bảo nội dung và nút "Thêm" được căn đều */
+        }
+
+        .DesProduct {
+          display: -webkit-box;
+          -webkit-line-clamp: 2; /* Giới hạn mô tả tối đa 2 dòng */
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          margin-bottom: 10px;
+        }
+      `}
+    </style>
       <ToastContainer />
     </>
   );

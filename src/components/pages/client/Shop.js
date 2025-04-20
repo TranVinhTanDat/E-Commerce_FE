@@ -226,7 +226,7 @@ const Shop = () => {
                                                 <output id="amount" name="amount" htmlFor="rangeInput">{rangeValue} $</output>
                                             </div>
                                         </div>
-                                        <div className="col-lg-12">
+                                        {/* <div className="col-lg-12">
                                             <div className="mb-3">
                                                 <h4>Thêm</h4>
                                                 <div className="mb-2">
@@ -250,12 +250,12 @@ const Shop = () => {
                                                     <label htmlFor="Categories-5">Hết hạn</label>
                                                 </div>
                                             </div>
-                                        </div>
+                                        </div> */}
                                         <div className="col-lg-12">
                                             <div className="position-relative">
                                                 <img src="img/banner-fruits.jpg" className="img-fluid w-100 rounded" alt="Banner trái cây" />
                                                 <div className="position-absolute" style={{ top: '50%', right: '10px', transform: 'translateY(-50%)' }}>
-                                                    <h3 className="text-secondary fw-bold">Trái cây <br /> Tươi <br /> Banner</h3>
+                                                    {/* <h3 className="text-secondary fw-bold">Trái cây <br /> Tươi <br /> Banner</h3> */}
                                                 </div>
                                             </div>
                                         </div>
@@ -322,6 +322,17 @@ const Shop = () => {
             </div>
             <a href="#" className="btn btn-primary border-3 border-primary rounded-circle back-to-top"><i className="fa fa-arrow-up"></i></a>
             <ToastContainer />
+
+            {/* Thêm CSS để ẩn banner trên màn hình nhỏ */}
+            <style>
+                {`
+                    @media (max-width: 576px) {
+                        .img-fluid.w-100.rounded {
+                            display: none;
+                        }
+                    }
+                `}
+            </style>
         </>
     );
 };

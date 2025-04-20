@@ -67,6 +67,11 @@ export default function Navbar() {
     };
 
     useEffect(() => {
+        // Đóng menu khi location.pathname thay đổi
+        closeMenu();
+    }, [location.pathname]);
+
+    useEffect(() => {
         const token = localStorage.getItem('token');
         if (token) {
             axios.get(`${API_BASE_URL}/auth/user`, {
@@ -883,7 +888,7 @@ styleSheet.innerText = `
         }
         .mobile-dropdown {
             background-color: #f8f9fa;
-            margin-left: 20px;
+            margin-left: 63px;
             padding: 10px 0;
             width: calc(100% - 40px);
             animation: slideDown 0.3s ease-in-out;
@@ -893,6 +898,10 @@ styleSheet.innerText = `
             font-size: 15px;
             color: #333;
             display: block;
+            width: 100%; /* Đảm bảo item chiếm toàn bộ chiều rộng của container */
+            min-width: 150px; /* Đặt chiều rộng tối thiểu để item dài hơn */
+            text-align: left; /* Căn trái nội dung */
+            box-sizing: border-box; /* Đảm bảo padding không làm tăng kích thước */
         }
         .mobile-dropdown-item:hover {
             background-color: #e9ecef;
