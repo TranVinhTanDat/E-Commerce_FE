@@ -2,9 +2,8 @@ import React, { useEffect, useState } from "react";
 import axiosInstance from "./axiosInstance";
 import Modal from "react-modal";
 
-const API_BASE_URL = "https://e-commerce-fe-seven-snowy.vercel.app/admin/users";
-// const API_BASE_URL = "http://localhost:8080/admin/users";
-
+const API_BASE_URL = "/admin/users"; // Nếu axiosInstance đã có baseURL, chỉ cần đường dẫn tương đối
+// Nếu không, dùng: const API_BASE_URL = "https://e-commerceapi-uk5z.onrender.com/admin/users";
 
 Modal.setAppElement("#root");
 
@@ -16,11 +15,9 @@ const AdminCustomers = () => {
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [errorMessage, setErrorMessage] = useState("");
 
-    // Phân trang
     const [currentPage, setCurrentPage] = useState(1);
     const usersPerPage = 9;
 
-    // Ô tìm kiếm
     const [searchQuery, setSearchQuery] = useState("");
 
     const fetchUsers = async () => {
@@ -29,7 +26,13 @@ const AdminCustomers = () => {
             setUsers(response.data);
         } catch (error) {
             console.error("Error fetching users:", error);
-            setErrorMessage("Không thể tải danh sách khách hàng");
+            if (error.code === "ERR_NETWORK") {
+                setErrorMessage("Không thể kết nối đến server. Vui lòng kiểm tra kết nối mạng hoặc thử lại sau.");
+            } else if (error.response) {
+                setErrorMessage(error.response.data.message || "Không thể tải danh sách khách hàng");
+            } else {
+                setErrorMessage("Đã xảy ra lỗi không xác định. Vui lòng thử lại.");
+            }
         }
     };
 
@@ -37,18 +40,15 @@ const AdminCustomers = () => {
         fetchUsers();
     }, []);
 
-    // Lọc user theo từ khóa tìm kiếm
     const filteredUsers = users.filter(user =>
         (user.username && user.username.toLowerCase().includes(searchQuery.toLowerCase())) ||
         (user.email && user.email.toLowerCase().includes(searchQuery.toLowerCase()))
     );
 
-    // Tính toán danh sách user trong trang hiện tại
     const indexOfLastUser = currentPage * usersPerPage;
     const indexOfFirstUser = indexOfLastUser - usersPerPage;
     const currentUsers = filteredUsers.slice(indexOfFirstUser, indexOfLastUser);
 
-    // Chuyển trang
     const nextPage = () => {
         if (currentPage < Math.ceil(filteredUsers.length / usersPerPage)) {
             setCurrentPage(currentPage + 1);
@@ -61,7 +61,6 @@ const AdminCustomers = () => {
         }
     };
 
-    // Thêm user
     const handleAddUser = async () => {
         try {
             await axiosInstance.post(`${API_BASE_URL}/add-user`, newUser);
@@ -79,13 +78,11 @@ const AdminCustomers = () => {
         }
     };
 
-    // Mở modal chỉnh sửa user
     const openEditModal = (user) => {
         setEditUser({ ...user, password: "" });
         setIsEditModalOpen(true);
     };
 
-    // Cập nhật user
     const handleEditUser = async () => {
         try {
             await axiosInstance.put(`${API_BASE_URL}/edit-user/${editUser.id}`, editUser);
@@ -102,7 +99,6 @@ const AdminCustomers = () => {
         }
     };
 
-    // Xóa user
     const handleDeleteUser = async (id) => {
         if (window.confirm("Bạn có chắc chắn muốn xóa người dùng này?")) {
             try {
@@ -124,14 +120,12 @@ const AdminCustomers = () => {
         <div className="admin-customers">
             <h2>Danh sách khách hàng</h2>
 
-            {/* Hiển thị thông báo lỗi */}
             {errorMessage && (
                 <div style={{ color: "red", marginBottom: "10px" }}>
                     {errorMessage}
                 </div>
             )}
 
-            {/* Ô tìm kiếm */}
             <input
                 type="text"
                 placeholder="Tìm kiếm theo tên hoặc email..."
@@ -176,14 +170,12 @@ const AdminCustomers = () => {
                 </tbody>
             </table>
 
-            {/* Phân trang */}
             <div className="pagination">
                 <button onClick={prevPage} disabled={currentPage === 1}>← Trước</button>
                 <span>Trang {currentPage} / {Math.ceil(filteredUsers.length / usersPerPage)}</span>
                 <button onClick={nextPage} disabled={currentPage === Math.ceil(filteredUsers.length / usersPerPage)}>Tiếp →</button>
             </div>
 
-            {/* Modal Thêm User */}
             <Modal
                 isOpen={isAddModalOpen}
                 onRequestClose={() => setIsAddModalOpen(false)}
@@ -241,7 +233,6 @@ const AdminCustomers = () => {
                 </div>
             </Modal>
 
-            {/* Modal Chỉnh Sửa User */}
             <Modal
                 isOpen={isEditModalOpen}
                 onRequestClose={() => setIsEditModalOpen(false)}
