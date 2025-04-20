@@ -7,8 +7,8 @@ const HeaderAdmin = () => {
     const [user, setUser] = useState({});
     const [showUserDropdown, setShowUserDropdown] = useState(false); // Dropdown cho avatar
     const [showNotificationDropdown, setShowNotificationDropdown] = useState(false); // Dropdown cho thông báo
-    const [newOrdersCount, setNewOrdersCount] = useState(0); // Số đơn hàng mới
-    const [newOrders, setNewOrders] = useState([]); // Danh sách đơn hàng mới
+    const [ordersCount, setOrdersCount] = useState(0); // Số đơn hàng hôm đó
+    const [orders, setOrders] = useState([]); // Danh sách đơn hàng hôm đó
     const [viewedNotifications, setViewedNotifications] = useState(
         localStorage.getItem('viewedNotifications') === 'true' // Khôi phục trạng thái từ localStorage
     ); // Trạng thái đã xem thông báo
@@ -30,38 +30,35 @@ const HeaderAdmin = () => {
         });
     }, []);
 
-    // Lấy số lượng và danh sách đơn hàng mới trong ngày
+    // Lấy danh sách và số lượng đơn hàng trong ngày hiện tại
     useEffect(() => {
-        const fetchNewOrdersData = async () => {
+        const fetchOrdersData = async () => {
             try {
                 const token = localStorage.getItem('token');
-                // Lấy số lượng đơn hàng mới
-                const countResponse = await axios.get(`${API_BASE_URL}/orders/new-count`, {
+                const today = new Date().toISOString().split('T')[0]; // Lấy ngày hiện tại (YYYY-MM-DD)
+
+                // Lấy danh sách đơn hàng trong ngày hiện tại
+                const ordersResponse = await axios.get(`${API_BASE_URL}/orders/all?date=${today}`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
-                const newCount = countResponse.data;
-                setNewOrdersCount(newCount);
+                const ordersData = ordersResponse.data;
+                setOrders(ordersData);
+                setOrdersCount(ordersData.length); // Đếm số lượng đơn hàng hôm đó
 
-                // Nếu có đơn hàng mới và chưa xem, reset trạng thái viewedNotifications
-                if (newCount > 0 && !viewedNotifications) {
+                // Nếu có đơn hàng và chưa xem, reset trạng thái viewedNotifications
+                if (ordersData.length > 0 && !viewedNotifications) {
                     setViewedNotifications(false);
                     localStorage.setItem('viewedNotifications', 'false');
                 }
-
-                // Lấy danh sách đơn hàng mới
-                const ordersResponse = await axios.get(`${API_BASE_URL}/orders/new`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                setNewOrders(ordersResponse.data);
             } catch (error) {
-                console.error('Error fetching new orders data:', error);
+                console.error('Error fetching orders data:', error);
             }
         };
 
-        fetchNewOrdersData();
-        const interval = setInterval(fetchNewOrdersData, 300000);
+        fetchOrdersData();
+        const interval = setInterval(fetchOrdersData, 300000); // Cập nhật mỗi 5 phút
         return () => clearInterval(interval);
-    }, [viewedNotifications]); // Thêm viewedNotifications vào dependency để kiểm tra lại khi cần
+    }, [viewedNotifications]);
 
     const handleLogout = () => {
         localStorage.removeItem('token');
@@ -111,24 +108,24 @@ const HeaderAdmin = () => {
                 <div style={styles.notificationDropdown} ref={notificationDropdownRef}>
                     <button style={styles.iconButton} onClick={handleNotificationClick}>
                         <i className="ri-notification-3-line"></i>
-                        {!viewedNotifications && newOrdersCount > 0 && (
-                            <span style={styles.badge}>{newOrdersCount}</span>
+                        {!viewedNotifications && ordersCount > 0 && (
+                            <span style={styles.badge}>{ordersCount}</span>
                         )}
                     </button>
                     {showNotificationDropdown && (
                         <div style={styles.dropdownMenu}>
-                            {newOrders.length > 0 ? (
-                                newOrders.map(order => (
+                            {orders.length > 0 ? (
+                                orders.map(order => (
                                     <button
-                                        key={order.id}
+                                        key={order.orderId}
                                         style={styles.dropdownItem}
-                                        onClick={() => handleOrderClick(order.id)}
+                                        onClick={() => handleOrderClick(order.orderId)}
                                     >
-                                        Bạn có đơn hàng mới hôm nay. ID: {order.id}
+                                        Bạn có đơn hàng hôm nay, ID: {order.orderId}
                                     </button>
                                 ))
                             ) : (
-                                <div style={styles.dropdownItem}>Không có đơn hàng mới hôm nay.</div>
+                                <div style={styles.dropdownItem}>Không có đơn hàng nào hôm nay.</div>
                             )}
                         </div>
                     )}
@@ -200,7 +197,7 @@ const styles = {
     },
     iconButton: {
         background: 'none',
-        color:'black',
+        color: 'black',
         border: 'none',
         fontSize: '20px',
         cursor: 'pointer',
@@ -244,6 +241,8 @@ const styles = {
         display: 'flex',
         flexDirection: 'column',
         zIndex: 10,
+        maxHeight: '400px',
+        overflowY: 'auto',
     },
     dropdownItem: {
         background: 'none',

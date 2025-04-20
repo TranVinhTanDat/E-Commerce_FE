@@ -48,21 +48,21 @@ function OrderHistory() {
             setErrorMessage('Vui lòng đăng nhập để xem chi tiết đơn hàng.');
             return;
         }
-
+    
         if (!orderId) {
             setErrorMessage('Order ID không hợp lệ.');
             return;
         }
-
+    
         console.log('Fetching details for Order ID:', orderId); // Debug
-
+    
         axios.get(`${API_BASE_URL}/orders/details/${orderId}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         })
         .then(response => {
-            console.log("Order Details:", response.data); // Debug
+            console.log("Order Details:", response.data);
             setSelectedOrder(response.data);
-            setErrorMessage(null); // Xóa thông báo lỗi nếu thành công
+            setErrorMessage(null);
             if (modalRef.current) {
                 const modal = new window.bootstrap.Modal(modalRef.current);
                 modal.show();
@@ -71,7 +71,8 @@ function OrderHistory() {
         .catch(error => {
             console.error('❌ Error fetching order details!', error);
             if (error.response?.status === 404) {
-                setErrorMessage('Không tìm thấy chi tiết đơn hàng. Vui lòng thử lại.');
+                setErrorMessage('Không tìm thấy chi tiết đơn hàng. Đang làm mới danh sách đơn hàng...');
+                fetchOrders(statusFilter); // Làm mới danh sách đơn hàng
             } else if (error.response?.status === 401) {
                 setErrorMessage('Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.');
             } else {
