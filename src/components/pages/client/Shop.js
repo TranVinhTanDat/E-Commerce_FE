@@ -5,6 +5,41 @@ import 'react-toastify/dist/ReactToastify.css';
 import { Link } from 'react-router-dom';
 import API_BASE_URL from '../../../utils/config';
 
+// Thành phần đệ quy để hiển thị danh mục
+const RecursiveCategory = ({ category, activeCategory, handleCategoryClick, expandedCategories, toggleSubcategories, level = 0 }) => {
+    return (
+        <li key={category.id}>
+            <div className="d-flex justify-content-between fruite-name" style={{ marginLeft: `${level * 15}px` }}>
+                <a href="#" onClick={() => handleCategoryClick(category)}>
+                    <i className="fas fa-apple-alt me-2"></i>{category.name}
+                </a>
+                {category.subCategories?.length > 0 && (
+                    <i
+                        className={`fas fa-caret-${expandedCategories[category.id] ? 'down' : 'right'} me-2`}
+                        onClick={() => toggleSubcategories(category.id)}
+                        style={{ cursor: 'pointer' }}
+                    ></i>
+                )}
+            </div>
+            {expandedCategories[category.id] && category.subCategories?.length > 0 && (
+                <ul className="list-unstyled ms-3">
+                    {category.subCategories.map(subCategory => (
+                        <RecursiveCategory
+                            key={subCategory.id}
+                            category={subCategory}
+                            activeCategory={activeCategory}
+                            handleCategoryClick={handleCategoryClick}
+                            expandedCategories={expandedCategories}
+                            toggleSubcategories={toggleSubcategories}
+                            level={level + 1}
+                        />
+                    ))}
+                </ul>
+            )}
+        </li>
+    );
+};
+
 const Shop = () => {
     const [rangeValue, setRangeValue] = useState(15000);
     const [keyword, setKeyword] = useState('');
@@ -113,6 +148,10 @@ const Shop = () => {
         }
     };
 
+    const formatCurrency = (value) => {
+        return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value);
+    };
+
     return (
         <>
             <div className="container-fluid fixed-top">
@@ -193,27 +232,20 @@ const Shop = () => {
                                                     <ul className="list-unstyled fruite-categorie">
                                                         <li>
                                                             <div className="d-flex justify-content-between fruite-name">
-                                                                <a href="#" onClick={() => handleCategoryClick({ name: 'All Products' })}><i className="fas fa-apple-alt me-2"></i>Tất cả sản phẩm</a>
+                                                                <a href="#" onClick={() => handleCategoryClick({ name: 'All Products' })}>
+                                                                    <i className="fas fa-apple-alt me-2"></i>Tất cả sản phẩm
+                                                                </a>
                                                             </div>
                                                         </li>
                                                         {Array.isArray(categories) && categories.map(category => (
-                                                            <li key={category.id}>
-                                                                <div className="d-flex justify-content-between fruite-name">
-                                                                    <a href="#" onClick={() => handleCategoryClick(category)}><i className="fas fa-apple-alt me-2"></i>{category.name}</a>
-                                                                    {category.subCategories?.length > 0 && (
-                                                                        <i className={`fas fa-caret-${expandedCategories[category.id] ? 'down' : 'right'} me-2`} onClick={() => toggleSubcategories(category.id)} style={{ cursor: 'pointer' }}></i>
-                                                                    )}
-                                                                </div>
-                                                                {expandedCategories[category.id] && (
-                                                                    <ul className="list-unstyled ms-3">
-                                                                        {category.subCategories?.map(subCategory => (
-                                                                            <li key={subCategory.id}>
-                                                                                <a href="#" onClick={() => handleCategoryClick(subCategory)}>{subCategory.name}</a>
-                                                                            </li>
-                                                                        ))}
-                                                                    </ul>
-                                                                )}
-                                                            </li>
+                                                            <RecursiveCategory
+                                                                key={category.id}
+                                                                category={category}
+                                                                activeCategory={activeCategory}
+                                                                handleCategoryClick={handleCategoryClick}
+                                                                expandedCategories={expandedCategories}
+                                                                toggleSubcategories={toggleSubcategories}
+                                                            />
                                                         ))}
                                                     </ul>
                                                 )}
@@ -222,41 +254,25 @@ const Shop = () => {
                                         <div className="col-lg-12">
                                             <div className="mb-3">
                                                 <h4 className="mb-2">Giá</h4>
-                                                <input type="range" className="form-range w-100" id="rangeInput" name="rangeInput" min="0" max="40000" value={rangeValue} onInput={handleRangeChange} />
-                                                <output id="amount" name="amount" htmlFor="rangeInput">{rangeValue} $</output>
+                                                <input
+                                                    type="range"
+                                                    className="form-range w-100"
+                                                    id="rangeInput"
+                                                    name="rangeInput"
+                                                    min="0"
+                                                    max="40000"
+                                                    value={rangeValue}
+                                                    onChange={handleRangeChange}
+                                                />
+                                                <output id="amount" name="amount" htmlFor="rangeInput">
+                                                    {formatCurrency(rangeValue)}
+                                                </output>
                                             </div>
                                         </div>
-                                        {/* <div className="col-lg-12">
-                                            <div className="mb-3">
-                                                <h4>Thêm</h4>
-                                                <div className="mb-2">
-                                                    <input type="radio" className="me-2" id="Categories-1" name="Categories-1" value="Organic" />
-                                                    <label htmlFor="Categories-1">Hữu cơ</label>
-                                                </div>
-                                                <div className="mb-2">
-                                                    <input type="radio" className="me-2" id="Categories-2" name="Categories-1" value="Fresh" />
-                                                    <label htmlFor="Categories-2">Tươi</label>
-                                                </div>
-                                                <div className="mb-2">
-                                                    <input type="radio" className="me-2" id="Categories-3" name="Categories-1" value="Sales" />
-                                                    <label htmlFor="Categories-3">Khuyến mãi</label>
-                                                </div>
-                                                <div className="mb-2">
-                                                    <input type="radio" className="me-2" id="Categories-4" name="Categories-1" value="Discount" />
-                                                    <label htmlFor="Categories-4">Giảm giá</label>
-                                                </div>
-                                                <div className="mb-2">
-                                                    <input type="radio" className="me-2" id="Categories-5" name="Categories-1" value="Expired" />
-                                                    <label htmlFor="Categories-5">Hết hạn</label>
-                                                </div>
-                                            </div>
-                                        </div> */}
                                         <div className="col-lg-12">
                                             <div className="position-relative">
                                                 <img src="img/banner-fruits.jpg" className="img-fluid w-100 rounded" alt="Banner trái cây" />
-                                                <div className="position-absolute" style={{ top: '50%', right: '10px', transform: 'translateY(-50%)' }}>
-                                                    {/* <h3 className="text-secondary fw-bold">Trái cây <br /> Tươi <br /> Banner</h3> */}
-                                                </div>
+                                                <div className="position-absolute" style={{ top: '50%', right: '10px', transform: 'translateY(-50%)' }}></div>
                                             </div>
                                         </div>
                                     </div>
@@ -275,20 +291,33 @@ const Shop = () => {
                                                     <div className="rounded position-relative fruite-item">
                                                         <div className="fruite-img">
                                                             <Link to={`/shopdetail/${product.id}`}>
-                                                                <img src={product.image} className="product-image img-fluid w-100 rounded-top" alt={product.name} />
+                                                                <img
+                                                                    src={product.image}
+                                                                    className="product-image img-fluid w-100 rounded-top"
+                                                                    alt={product.name}
+                                                                />
                                                             </Link>
                                                         </div>
-                                                        <div className="text-white bg-secondary px-3 py-1 rounded position-absolute" style={{ top: '10px', left: '10px' }}>
+                                                        <div
+                                                            className="text-white bg-secondary px-3 py-1 rounded position-absolute"
+                                                            style={{ top: '10px', left: '10px' }}
+                                                        >
                                                             {product.category?.name || 'Không xác định'}
                                                         </div>
                                                         <div className="p-4 border border-secondary border-top-0 rounded-bottom">
                                                             <Link to={`/shopdetail/${product.id}`} className="text-dark">
-                                                                <h4>{product.name}</h4>
+                                                                <h4 className="text-lg font-semibold">{product.name}</h4>
                                                             </Link>
-                                                            <p className="DesProductShop" style={{ color: 'black' }}>{product.description}</p>
+                                                            <p className="DesProductShop text-gray-600">{product.description}</p>
                                                             <div className="d-flex justify-content-between flex-lg-wrap">
-                                                                <p className="text-dark fs-5 fw-bold mb-0">{product.price} VNĐ</p>
-                                                                <a href="#" className="btn border border-secondary rounded-pill px-3 text-primary" onClick={() => handleAddToCart(product.id)}>
+                                                                <p className="text-dark fs-5 fw-bold mb-0">
+                                                                    {formatCurrency(product.price)}
+                                                                </p>
+                                                                <a
+                                                                    href="#"
+                                                                    className="btn border border-primary rounded-pill px-3 text-primary"
+                                                                    onClick={() => handleAddToCart(product.id)}
+                                                                >
                                                                     <i className="fa fa-shopping-bag me-2 text-primary"></i> Thêm vào giỏ
                                                                 </a>
                                                             </div>
@@ -299,7 +328,14 @@ const Shop = () => {
                                         )}
                                         <div className="col-12">
                                             <div className="pagination d-flex justify-content-center mt-5">
-                                                <a href="#" className="rounded" onClick={() => paginate(currentPage - 1)} disabled={currentPage === 1}>«</a>
+                                                <a
+                                                    href="#"
+                                                    className="rounded"
+                                                    onClick={() => paginate(currentPage - 1)}
+                                                    disabled={currentPage === 1}
+                                                >
+                                                    «
+                                                </a>
                                                 {Array.from({ length: totalPages }, (_, index) => (
                                                     <a
                                                         key={index}
@@ -310,7 +346,14 @@ const Shop = () => {
                                                         {index + 1}
                                                     </a>
                                                 ))}
-                                                <a href="#" className="rounded" onClick={() => paginate(currentPage + 1)} disabled={currentPage === totalPages}>»</a>
+                                                <a
+                                                    href="#"
+                                                    className="rounded"
+                                                    onClick={() => paginate(currentPage + 1)}
+                                                    disabled={currentPage === totalPages}
+                                                >
+                                                    »
+                                                </a>
                                             </div>
                                         </div>
                                     </div>
@@ -320,16 +363,79 @@ const Shop = () => {
                     </div>
                 </div>
             </div>
-            <a href="#" className="btn btn-primary border-3 border-primary rounded-circle back-to-top"><i className="fa fa-arrow-up"></i></a>
+            <a href="#" className="btn btn-primary border-3 border-primary rounded-circle back-to-top">
+                <i className="fa fa-arrow-up"></i>
+            </a>
             <ToastContainer />
 
-            {/* Thêm CSS để ẩn banner trên màn hình nhỏ */}
+            {/* CSS để đồng bộ kích thước và cải thiện giao diện */}
             <style>
                 {`
+                    .fruite-item {
+                        display: flex;
+                        flex-direction: column;
+                        height: 450px; /* Cố định chiều cao của thẻ sản phẩm */
+                        overflow: hidden; /* Ẩn nội dung vượt quá chiều cao */
+                    }
+
+                    .fruite-img img {
+                        width: 100%;
+                        height: 250px; /* Cố định chiều cao của hình ảnh */
+                        object-fit: cover; /* Ảnh sẽ được cắt để lấp đầy khung mà không bị méo */
+                        display: block;
+                    }
+
+                    .fruite-item .p-4 {
+                        flex: 1; /* Phần nội dung sẽ mở rộng để lấp đầy không gian còn lại */
+                        display: flex;
+                        flex-direction: column;
+                        justify-content: space-between; /* Đảm bảo nội dung và nút "Thêm" được căn đều */
+                    }
+
+                    .DesProductShop {
+                        display: -webkit-box;
+                        -webkit-line-clamp: 2; /* Giới hạn mô tả tối đa 2 dòng */
+                        -webkit-box-orient: vertical;
+                        overflow: hidden;
+                        text-overflow: ellipsis;
+                        margin-bottom: 10px;
+                        color: #4B5563; /* Màu xám đậm cho mô tả */
+                    }
+
+                    .text-lg {
+                        font-size: 1.125rem; /* Kích thước chữ tiêu đề */
+                    }
+
+                    .font-semibold {
+                        font-weight: 600; /* Độ đậm của chữ tiêu đề */
+                    }
+
+                    .text-dark.fs-5.fw-bold {
+                        color: #1F2937; /* Màu đen đậm cho giá */
+                    }
+
+                    .btn.border-primary {
+                        border-color: #3B82F6; /* Màu viền xanh dương cho nút */
+                        color: #3B82F6; /* Màu chữ xanh dương */
+                    }
+
+                    .btn.border-primary:hover {
+                        background-color: #3B82F6; /* Màu nền xanh dương khi hover */
+                        color: white; /* Màu chữ trắng khi hover */
+                    }
+
+                    .text-primary {
+                        color: #3B82F6 !important; /* Màu xanh dương cho biểu tượng và chữ trong nút */
+                    }
+
                     @media (max-width: 576px) {
                         .img-fluid.w-100.rounded {
                             display: none;
                         }
+                    }
+
+                    .fruite-categorie li {
+                        margin-bottom: 5px;
                     }
                 `}
             </style>

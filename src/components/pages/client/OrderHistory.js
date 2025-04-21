@@ -9,7 +9,8 @@ function OrderHistory() {
     const [orders, setOrders] = useState([]);
     const [statusFilter, setStatusFilter] = useState("ALL");
     const [selectedOrder, setSelectedOrder] = useState(null);
-    const [errorMessage, setErrorMessage] = useState(null); // Thêm state để lưu lỗi
+    const [errorMessage, setErrorMessage] = useState(null);
+    const [isLoading, setIsLoading] = useState(false);
     const modalRef = useRef(null);
 
     useEffect(() => {
@@ -23,6 +24,7 @@ function OrderHistory() {
             return;
         }
 
+        setIsLoading(true);
         let url = `${API_BASE_URL}/orders/user`;
         if (status !== "ALL") {
             url += `?status=${status}`;
@@ -34,11 +36,22 @@ function OrderHistory() {
         .then(response => {
             const sortedOrders = response.data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
             setOrders(sortedOrders);
-            setErrorMessage(null); // Xóa thông báo lỗi nếu thành công
+            setErrorMessage(null);
         })
         .catch(error => {
             console.error('❌ Error fetching orders!', error);
-            setErrorMessage('Không thể tải danh sách đơn hàng. Vui lòng thử lại sau.');
+            if (error.response?.status === 401) {
+                setErrorMessage('Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.');
+                localStorage.removeItem('token');
+                setTimeout(() => {
+                    window.location.href = '/login';
+                }, 2000);
+            } else {
+                setErrorMessage(error.response?.data || 'Không thể tải danh sách đơn hàng. Vui lòng thử lại sau.');
+            }
+        })
+        .finally(() => {
+            setIsLoading(false);
         });
     };
 
@@ -48,14 +61,15 @@ function OrderHistory() {
             setErrorMessage('Vui lòng đăng nhập để xem chi tiết đơn hàng.');
             return;
         }
-    
+
         if (!orderId) {
             setErrorMessage('Order ID không hợp lệ.');
             return;
         }
-    
-        console.log('Fetching details for Order ID:', orderId); // Debug
-    
+
+        console.log('Fetching details for Order ID:', orderId);
+
+        setIsLoading(true);
         axios.get(`${API_BASE_URL}/orders/details/${orderId}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         })
@@ -72,134 +86,154 @@ function OrderHistory() {
             console.error('❌ Error fetching order details!', error);
             if (error.response?.status === 404) {
                 setErrorMessage('Không tìm thấy chi tiết đơn hàng. Đang làm mới danh sách đơn hàng...');
-                fetchOrders(statusFilter); // Làm mới danh sách đơn hàng
+                fetchOrders(statusFilter);
             } else if (error.response?.status === 401) {
                 setErrorMessage('Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.');
+                localStorage.removeItem('token');
+                setTimeout(() => {
+                    window.location.href = '/login';
+                }, 2000);
             } else {
-                setErrorMessage('Có lỗi xảy ra khi tải chi tiết đơn hàng.');
+                setErrorMessage(error.response?.data || 'Có lỗi xảy ra khi tải chi tiết đơn hàng.');
             }
+        })
+        .finally(() => {
+            setIsLoading(false);
         });
     };
 
     return (
-        <div className="order-history-container">
-            <h1 className="mb-4 text-center">📦 Order History</h1>
+        <div className="order-history-container container my-5">
+            <h1 className="mb-4 text-center" style={{marginTop:'50px'}}>📦 Lịch Sử Đơn Hàng</h1>
 
-            {/* Hiển thị thông báo lỗi nếu có */}
             {errorMessage && (
                 <div className="alert alert-danger text-center" role="alert">
                     {errorMessage}
                 </div>
             )}
 
-            <Tabs 
-                id="order-status-tabs" 
-                activeKey={statusFilter} 
-                onSelect={(k) => setStatusFilter(k)} 
-                className="mb-3"
-            >
-                <Tab eventKey="ALL" title="All Orders" />
-                <Tab eventKey="PENDING" title="Pending" />
-                <Tab eventKey="PROCESSING" title="Processing" />
-                <Tab eventKey="SHIPPED" title="Shipped" />
-                <Tab eventKey="DELIVERED" title="Delivered" />
-                <Tab eventKey="CANCELED" title="Canceled" />
-                <Tab eventKey="REFUNDED" title="Refunded" />
-            </Tabs>
-
-            <div className="order-list">
-                <div className="row">
-                    {orders.length === 0 ? (
-                        <p className="text-center text-muted">No orders found for this status.</p>
-                    ) : (
-                        orders.map(order => (
-                            <div className="col-md-6 mb-4" key={order.id}>
-                                <div className="order-card p-3 shadow-sm rounded bg-white d-flex align-items-center">
-                                    <div className="order-info flex-grow-1">
-                                        <h5 className="fw-bold">
-                                            <i className="fas fa-shopping-cart"></i> Order ID: <span className="text-dark">{order.id}</span>
-                                        </h5>
-                                        <p className="mb-1 text-danger fw-bold">Total: ${order.total.toFixed(2)}</p>
-                                        <p className="mb-1">
-                                            <strong>Status:</strong> 
-                                            <span className="badge bg-warning text-dark mx-2">{order.status}</span>
-                                        </p>
-                                        <p className="mb-1"><strong>Created At:</strong> {new Date(order.createdAt).toLocaleString()}</p>
-                                        <p className="mb-1"><strong>Updated At:</strong> {new Date(order.updatedAt).toLocaleString()}</p>
-
-                                        <button 
-                                            className="btn btn-primary mt-2" 
-                                            onClick={() => fetchOrderDetails(order.id)}
-                                        >
-                                            View Details
-                                        </button>
-                                    </div>
-
-                                    <div className="order-logo ms-3">
-                                        <img 
-                                            src="https://webadmin.beeart.vn/upload/image/20220425/6378647833497878085203022.png" 
-                                            alt="Order Logo"
-                                            className="rounded-circle"
-                                            style={{ width: '60px', height: '60px', objectFit: 'cover' }}
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-                        ))
-                    )}
+            {isLoading ? (
+                <div className="text-center">
+                    <div className="spinner-border text-primary" role="status">
+                        <span className="visually-hidden">Đang tải...</span>
+                    </div>
+                    <p>Đang tải đơn hàng...</p>
                 </div>
-            </div>
+            ) : (
+                <>
+                    <Tabs
+                        id="order-status-tabs"
+                        activeKey={statusFilter}
+                        onSelect={(k) => setStatusFilter(k)}
+                        className="mb-4 justify-content-center"
+                        variant="pills"
+                    >
+                        <Tab eventKey="ALL" title="Tất Cả" />
+                        <Tab eventKey="PENDING" title="Chờ Xử Lý" />
+                        <Tab eventKey="PROCESSING" title="Đang Xử Lý" />
+                        <Tab eventKey="SHIPPED" title="Đã Gửi Hàng" />
+                        <Tab eventKey="DELIVERED" title="Đã Giao Hàng" />
+                        <Tab eventKey="CANCELED" title="Đã Hủy" />
+                        <Tab eventKey="REFUNDED" title="Đã Hoàn Tiền" />
+                    </Tabs>
+
+                    <div className="order-list">
+                        <div className="row">
+                            {orders.length === 0 ? (
+                                <p className="text-center text-muted">Không tìm thấy đơn hàng nào với trạng thái này.</p>
+                            ) : (
+                                orders.map(order => (
+                                    <div className="col-md-6 col-lg-4 mb-4" key={order.orderId}>
+                                        <div className="order-card p-4 shadow-sm rounded bg-white d-flex align-items-center">
+                                            <div className="order-info flex-grow-1">
+                                                <h5 className="fw-bold">
+                                                    <i className="fas fa-shopping-cart me-2"></i> Mã Đơn Hàng: <span className="text-dark">{order.orderId}</span>
+                                                </h5>
+                                                <p className="mb-1 text-danger fw-bold">Tổng: ${order.total.toFixed(2)}</p>
+                                                <p className="mb-1">
+                                                    <strong>Trạng Thái:</strong>
+                                                    <span className={`badge mx-2 ${order.status === 'DELIVERED' ? 'bg-success' : order.status === 'CANCELED' || order.status === 'REFUNDED' ? 'bg-danger' : 'bg-warning'} text-dark`}>
+                                                        {order.status}
+                                                    </span>
+                                                </p>
+                                                {/* <p className="mb-1"><strong>Ngày Tạo:</strong> {order.createdAt ? new Date(order.createdAt).toLocaleString() : 'N/A'}</p>
+                                                <p className="mb-1"><strong>Ngày Cập Nhật:</strong> {order.updatedAt ? new Date(order.updatedAt).toLocaleString() : 'N/A'}</p> */}
+                                                <button
+                                                    className="btn btn-primary mt-2"
+                                                    onClick={() => fetchOrderDetails(order.orderId)}
+                                                >
+                                                    Xem Chi Tiết
+                                                </button>
+                                            </div>
+                                            <div className="order-logo ms-3">
+                                                <img
+                                                    src="https://webadmin.beeart.vn/upload/image/20220425/6378647833497878085203022.png"
+                                                    alt="Order Logo"
+                                                    className="rounded-circle"
+                                                    style={{ width: '60px', height: '60px', objectFit: 'cover' }}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </div>
+                </>
+            )}
 
             <div className="modal fade" ref={modalRef} id="orderDetailModal" tabIndex="-1" aria-labelledby="orderDetailModalLabel" aria-hidden="true">
                 <div className="modal-dialog modal-lg">
                     <div className="modal-content">
                         <div className="modal-header">
-                            <h5 className="modal-title">📄 Order Details</h5>
+                            <h5 className="modal-title" id="orderDetailModalLabel">📄 Chi Tiết Đơn Hàng</h5>
                             <button type="button" className="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
                         <div className="modal-body">
                             {selectedOrder ? (
                                 <>
-                                    <h5>Order ID: {selectedOrder.id}</h5>
-                                    <p><strong>Total:</strong> ${selectedOrder.total.toFixed(2)}</p>
-                                    <p><strong>Status:</strong> {selectedOrder.status}</p>
-                                    <p><strong>Created At:</strong> {new Date(selectedOrder.createdAt).toLocaleString()}</p>
-                                    <p><strong>Updated At:</strong> {new Date(selectedOrder.updatedAt).toLocaleString()}</p>
-                                    <p><strong>Customer:</strong> {selectedOrder.userName}</p>
+                                    <h5>Mã Đơn Hàng: {selectedOrder.id}</h5>
+                                    <p><strong>Tổng:</strong> ${selectedOrder.total.toFixed(2)}</p>
+                                    <p><strong>Trạng Thái:</strong> {selectedOrder.status}</p>
+                                    <p><strong>Ngày Tạo:</strong> {new Date(selectedOrder.createdAt).toLocaleString()}</p>
+                                    <p><strong>Ngày Cập Nhật:</strong> {new Date(selectedOrder.updatedAt).toLocaleString()}</p>
+                                    <p><strong>Khách Hàng:</strong> {selectedOrder.userName}</p>
                                     <p><strong>Email:</strong> {selectedOrder.userEmail}</p>
+                                    {/* <p><strong>Địa Chỉ Giao Hàng:</strong> {selectedOrder.addressLine1}, {selectedOrder.addressLine2 || ''}</p>
+                                    <p><strong>Số Điện Thoại:</strong> {selectedOrder.phone || 'N/A'}</p> */}
 
-                                    <h6 className="mt-3">🛒 Items:</h6>
+                                    <h6 className="mt-3">🛒 Danh Sách Sản Phẩm:</h6>
                                     <div className="list-group">
                                         {selectedOrder.items?.length > 0 ? (
                                             selectedOrder.items.map(item => (
-                                                <div className="list-group-item d-flex align-items-center" key={item.id}>
-                                                    <img 
-                                                        src={item.image || '/fallback-image.jpg'} 
-                                                        alt={item.productName || 'Product'} 
-                                                        className="rounded"
-                                                        style={{ width: '70px', height: '70px', objectFit: 'cover' }} 
+                                                <div className="list-group-item d-flex align-items-center mb-2" key={item.id}>
+                                                    <img
+                                                        src={item.image || '/fallback-image.jpg'}
+                                                        alt={item.productName || 'Product'}
+                                                        className="rounded me-3"
+                                                        style={{ width: '70px', height: '70px', objectFit: 'cover' }}
                                                     />
                                                     <div style={{ flex: 1 }}>
                                                         <p className="mb-1"><strong>{item.productName || 'N/A'}</strong></p>
-                                                        <p className="mb-1">Qty: {item.quantity}</p>
-                                                        <p className="mb-1 text-danger fw-bold">Price: ${item.price.toFixed(2)}</p>
+                                                        <p className="mb-1">Số Lượng: {item.quantity}</p>
+                                                        <p className="mb-1 text-danger fw-bold">Giá: ${item.price.toFixed(2)}</p>
                                                     </div>
                                                     <p className="mb-0 fw-bold">
-                                                        Total: ${(item.price * item.quantity).toFixed(2)}
+                                                        Tổng: ${(item.price * item.quantity).toFixed(2)}
                                                     </p>
                                                 </div>
                                             ))
                                         ) : (
-                                            <p>No items found.</p>
+                                            <p>Không tìm thấy sản phẩm nào.</p>
                                         )}
                                     </div>
                                 </>
                             ) : (
-                                <p>Loading...</p>
+                                <p>Đang tải...</p>
                             )}
                         </div>
                         <div className="modal-footer">
-                            <button type="button" className="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                            <button type="button" className="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
                         </div>
                     </div>
                 </div>
@@ -208,4 +242,4 @@ function OrderHistory() {
     );
 }
 
-export default OrderHistory;
+export default OrderHistory;    

@@ -86,6 +86,12 @@ const customStyles = `
         box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);
     }
 
+    .modal-body {
+        max-height: 70vh;
+        overflow-y: auto;
+        padding: 1.5rem;
+    }
+
     .modal-body .address-item {
         padding: 1rem;
         border-radius: 10px;
@@ -188,6 +194,40 @@ const customStyles = `
     .modal-footer .btn-secondary {
         background-color: #6c757d;
         border-color: #6c757d;
+    }
+
+    .form-section {
+        background-color: #fff;
+        padding: 1.5rem;
+        border-radius: 10px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        border: 1px solid #e0e0e0;
+        margin-top: 1rem;
+    }
+
+    .form-section .form-item {
+        margin-bottom: 1rem;
+    }
+
+    .form-section .btn-cancel {
+        padding: 0.5rem 1.25rem;
+        font-size: 0.9rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        border-radius: 8px;
+        border: 2px solid #6c757d;
+        color: #6c757d;
+        background-color: transparent;
+        transition: all 0.3s ease;
+        margin-right: 1rem;
+    }
+
+    .form-section .btn-cancel:hover {
+        background-color: #6c757d;
+        color: #fff;
+        transform: translateY(-1px);
+        box-shadow: 0 2px 8px rgba(108, 117, 125, 0.3);
     }
 `;
 
@@ -466,6 +506,23 @@ function Checkout() {
         }
     };
 
+    const handleCancelForm = () => {
+        setShowAddAddressForm(false);
+        setEditingAddress(null);
+        setNewAddress({
+            addressLine1: '',
+            addressLine2: '',
+            city: '',
+            state: '',
+            postalCode: '',
+            country: '',
+            phone: '',
+            email: '',
+            isDefault: false,
+        });
+        setErrors({});
+    };
+
     const handlePaymentMethodChange = (e) => {
         setPaymentMethod(e.target.value);
     };
@@ -555,9 +612,8 @@ function Checkout() {
                                     <h3>Địa chỉ giao hàng</h3>
                                     {selectedAddress ? (
                                         <div className="address-details">
-                                            <p className="address-info"> 
-                                            <i style={{color:'red', fontWeight:'bold'}}>Địa chỉ:</i> {selectedAddress.addressLine1}
-
+                                            <p className="address-info">
+                                                <i style={{ color: 'red', fontWeight: 'bold' }}>Địa chỉ:</i> {selectedAddress.addressLine1}
                                                 {selectedAddress.addressLine2 && `, ${selectedAddress.addressLine2}`}, {selectedAddress.city}, {selectedAddress.state}, {selectedAddress.postalCode}, {selectedAddress.country}
                                             </p>
                                             <p className="phone-email phone">
@@ -711,92 +767,97 @@ function Checkout() {
                         </div>
                         <div className="modal-body">
                             {/* Danh sách địa chỉ */}
-                            {addresses.length === 0 ? (
-                                <p>Chưa có địa chỉ nào. Vui lòng thêm địa chỉ mới.</p>
-                            ) : (
-                                <div>
-                                    {addresses.map((addr) => (
-                                        <div
-                                            key={addr.id}
-                                            className={`address-item d-flex justify-content-between align-items-center mb-3 ${
-                                                selectedAddressId === addr.id ? 'selected' : ''
-                                            }`}
-                                        >
-                                            <div className="d-flex align-items-center">
-                                                <input
-                                                    type="radio"
-                                                    name="address"
-                                                    value={addr.id}
-                                                    checked={selectedAddressId === addr.id}
-                                                    onChange={() => handleAddressSelect(addr.id)}
-                                                    className="me-3"
-                                                />
-                                                <div>
-                                                    <p className="mb-1">
-                                                        {addr.addressLine1}
-                                                        {addr.addressLine2 && `, ${addr.addressLine2}`}, {addr.city}, {addr.state}, {addr.postalCode}, {addr.country}
-                                                    </p>
-                                                    <p className="mb-1">Phone: {addr.phone}</p>
-                                                    <p className="mb-1">Email: {addr.email}</p>
-                                                    {addr.isDefault && <p className="default-label mb-0">Mặc định</p>}
+                            {!showAddAddressForm && (
+                                <>
+                                    {addresses.length === 0 ? (
+                                        <p>Chưa có địa chỉ nào. Vui lòng thêm địa chỉ mới.</p>
+                                    ) : (
+                                        <div>
+                                            {addresses.map((addr) => (
+                                                <div
+                                                    key={addr.id}
+                                                    className={`address-item d-flex justify-content-between align-items-center mb-3 ${
+                                                        selectedAddressId === addr.id ? 'selected' : ''
+                                                    }`}
+                                                >
+                                                    <div className="d-flex align-items-center">
+                                                        <input
+                                                            type="radio"
+                                                            name="address"
+                                                            value={addr.id}
+                                                            checked={selectedAddressId === addr.id}
+                                                            onChange={() => handleAddressSelect(addr.id)}
+                                                            className="me-3"
+                                                        />
+                                                        <div>
+                                                            <p className="mb-1">
+                                                                {addr.addressLine1}
+                                                                {addr.addressLine2 && `, ${addr.addressLine2}`}, {addr.city}, {addr.state}, {addr.postalCode}, {addr.country}
+                                                            </p>
+                                                            <p className="mb-1">Phone: {addr.phone}</p>
+                                                            <p className="mb-1">Email: {addr.email}</p>
+                                                            {addr.isDefault && <p className="default-label mb-0">Mặc định</p>}
+                                                        </div>
+                                                    </div>
+                                                    <div>
+                                                        <button
+                                                            type="button"
+                                                            className="btn btn-primary btn-action me-2"
+                                                            onClick={() => handleEditAddress(addr)}
+                                                        >
+                                                            Sửa
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            className="btn btn-danger btn-action me-2"
+                                                            onClick={() => handleDeleteAddress(addr.id)}
+                                                        >
+                                                            Xóa
+                                                        </button>
+                                                        {!addr.isDefault && (
+                                                            <button
+                                                                type="button"
+                                                                className="btn btn-outline-primary btn-action"
+                                                                onClick={() => handleSetDefaultAddress(addr.id)}
+                                                            >
+                                                                Đặt làm mặc định
+                                                            </button>
+                                                        )}
+                                                    </div>
                                                 </div>
-                                            </div>
-                                            <div>
-                                                <button
-                                                    type="button"
-                                                    className="btn btn-primary btn-action me-2"
-                                                    onClick={() => handleEditAddress(addr)}
-                                                >
-                                                    Sửa
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    className="btn btn-danger btn-action me-2"
-                                                    onClick={() => handleDeleteAddress(addr.id)}
-                                                >
-                                                    Xóa
-                                                </button>
-                                                {!addr.isDefault && (
-                                                    <button
-                                                        type="button"
-                                                        className="btn btn-outline-primary btn-action"
-                                                        onClick={() => handleSetDefaultAddress(addr.id)}
-                                                    >
-                                                        Đặt làm mặc định
-                                                    </button>
-                                                )}
-                                            </div>
+                                            ))}
                                         </div>
-                                    ))}
-                                </div>
-                            )}
+                                    )}
 
-                            {/* Nút thêm địa chỉ mới */}
-                            <button
-                                type="button"
-                                className="btn btn-add-new mb-3"
-                                onClick={() => {
-                                    setShowAddAddressForm(!showAddAddressForm);
-                                    setEditingAddress(null);
-                                    setNewAddress({
-                                        addressLine1: '',
-                                        addressLine2: '',
-                                        city: '',
-                                        state: '',
-                                        postalCode: '',
-                                        country: '',
-                                        phone: '',
-                                        email: '',
-                                        isDefault: false,
-                                    });
-                                }}
-                            >
-                                <i className="fas fa-plus me-2"></i> Thêm địa chỉ mới
-                            </button>
+                                    {/* Nút thêm địa chỉ mới */}
+                                    <button
+                                        type="button"
+                                        className="btn btn-add-new mb-3"
+                                        onClick={() => {
+                                            setShowAddAddressForm(true);
+                                            setEditingAddress(null);
+                                            setNewAddress({
+                                                addressLine1: '',
+                                                addressLine2: '',
+                                                city: '',
+                                                state: '',
+                                                postalCode: '',
+                                                country: '',
+                                                phone: '',
+                                                email: '',
+                                                isDefault: false,
+                                            });
+                                        }}
+                                    >
+                                        <i className="fas fa-plus me-2"></i> Thêm địa chỉ mới
+                                    </button>
+                                </>
+                            )}
 
                             {/* Form thêm/sửa địa chỉ */}
                             {showAddAddressForm && (
-                                <div className="mt-4">
+                                <div className="form-section">
+                                    <h5>{editingAddress ? 'Chỉnh sửa địa chỉ' : 'Thêm địa chỉ mới'}</h5>
                                     <div className="row">
                                         <div className="col-md-12 col-lg-6">
                                             <div className="form-item w-100">
@@ -903,10 +964,17 @@ function Checkout() {
                                         </label>
                                     </div>
                                     <div className="row g-4 text-center align-items-center justify-content-center pt-4">
+                                        <button
+                                            type="button"
+                                            className="btn btn-cancel"
+                                            onClick={handleCancelForm}
+                                        >
+                                            Hủy
+                                        </button>
                                         {editingAddress ? (
                                             <button
                                                 type="button"
-                                                className="btn btn-secondary py-3 px-4 text-uppercase w-100 text-primary"
+                                                className="btn btn-secondary py-3 px-4 text-uppercase w-50 text-primary"
                                                 onClick={handleUpdateAddress}
                                             >
                                                 Cập nhật địa chỉ
@@ -914,7 +982,7 @@ function Checkout() {
                                         ) : (
                                             <button
                                                 type="button"
-                                                className="btn btn-secondary py-3 px-4 text-uppercase w-100 text-primary"
+                                                className="btn btn-secondary py-3 px-4 text-uppercase w-50 text-primary"
                                                 onClick={handleSaveAddress}
                                             >
                                                 Lưu địa chỉ
