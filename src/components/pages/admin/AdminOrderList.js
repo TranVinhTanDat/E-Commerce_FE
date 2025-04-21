@@ -26,7 +26,13 @@ function AdminOrderList() {
         axios.get(`${API_BASE_URL}/orders/all?date=${date}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         })
-        .then(response => setOrders(response.data))
+        .then(response => {
+            // Loại bỏ các đơn hàng trùng lặp dựa trên orderId
+            const uniqueOrders = Array.from(
+                new Map(response.data.map(order => [order.orderId, order])).values()
+            );
+            setOrders(uniqueOrders);
+        })
         .catch(error => console.error('Error fetching orders:', error));
     };
 
@@ -35,7 +41,13 @@ function AdminOrderList() {
         axios.get(`${API_BASE_URL}/orders/all`, {
             headers: { 'Authorization': `Bearer ${token}` }
         })
-        .then(response => setOrders(response.data))
+        .then(response => {
+            // Loại bỏ các đơn hàng trùng lặp dựa trên orderId
+            const uniqueOrders = Array.from(
+                new Map(response.data.map(order => [order.orderId, order])).values()
+            );
+            setOrders(uniqueOrders);
+        })
         .catch(error => console.error('Error fetching all orders:', error));
     };
 
